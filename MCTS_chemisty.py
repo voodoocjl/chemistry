@@ -5,7 +5,7 @@ import json
 import csv
 import numpy as np
 import torch
-from Node import Node
+from Node_hidden import Node
 from ChemModel import translator
 from schemes import chemistry
 import time
@@ -67,7 +67,7 @@ class MCTS:
 
 
     def init_train(self):
-        for i in range(0, 200):
+        for i in range(0, 5):
             net = random.choice(self.search_space)
             self.search_space.remove(net)
             self.TASK_QUEUE.append(net)

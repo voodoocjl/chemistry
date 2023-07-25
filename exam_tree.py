@@ -5,8 +5,7 @@ import json
 import csv
 import numpy as np
 import torch
-import FusionModel
-from Node import Node
+from Node_hidden import Node
 from multiprocessing.connection import Listener
 
 

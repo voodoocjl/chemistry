@@ -68,51 +68,6 @@ def evaluate(model, data_loader, args):
     metrics['f1'] = f1_score(true_label, pred_label, average='weighted').item()
     return metrics
 
-
-def Scheme(design):
-    args = Arguments()
-    if torch.cuda.is_available() and args.device == 'cuda':
-        print("using cuda device")
-    else:
-        print("using cpu device")
-    train_loader, val_loader, test_loader = MOSIDataLoaders(args)
-    model = QNet(args, design).to(args.device)
-    criterion = nn.L1Loss(reduction='sum')
-    optimizer = optim.Adam([
-        {'params': model.ClassicalLayer_a.parameters()},
-        {'params': model.ClassicalLayer_v.parameters()},
-        {'params': model.ClassicalLayer_t.parameters()},
-        {'params': model.ProjLayer_a.parameters()},
-        {'params': model.ProjLayer_v.parameters()},
-        {'params': model.ProjLayer_t.parameters()},
-        {'params': model.QuantumLayer.parameters(), 'lr': args.qlr},
-        {'params': model.Regressor.parameters()}
-        ], lr=args.clr)
-    train_loss_list, val_loss_list = [], []
-    best_val_loss = 10000
-
-    start = time.time()
-    for epoch in range(args.epochs):
-        train(model, train_loader, optimizer, criterion, args)
-        train_loss = test(model, train_loader, criterion, args)
-        train_loss_list.append(train_loss)
-        val_loss = test(model, val_loader, criterion, args)
-        val_loss_list.append(val_loss)
-        if val_loss < best_val_loss:
-            best_val_loss = val_loss
-            print(epoch, train_loss, val_loss, 'saving model')
-            best_model = copy.deepcopy(model)
-        else:
-            print(epoch, train_loss, val_loss)
-    end = time.time()
-    print("Running time: %s seconds" % (end - start))
-    
-    metrics = evaluate(best_model, test_loader, args)
-    display(metrics)
-    report = {'train_loss_list': train_loss_list, 'val_loss_list': val_loss_list,
-              'best_val_loss': best_val_loss, 'metrics': metrics}
-    return best_model, report
-
 def chemistry(design):
     import pennylane as qml
     from math import pi
@@ -133,13 +88,13 @@ def chemistry(design):
         return qml.expval(hamiltonian)
    
     energy = []
-    for i in range(10):
+    for i in range(5):
         q_params = 2 * pi * np.random.rand(design['layer_repe'] * args.n_qubits * 2)
         opt = qml.GradientDescentOptimizer(stepsize=0.4)
 
         for n in range(50):
             q_params, prev_energy = opt.step_and_cost(cost_fn, q_params)
-            print(f"--- Step: {n}, Energy: {cost_fn(q_params):.8f}")
+            # print(f"--- Step: {n}, Energy: {cost_fn(q_params):.8f}")
         energy.append(cost_fn(q_params))
     
     metrics = np.mean(energy)
