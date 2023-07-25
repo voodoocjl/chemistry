@@ -139,7 +139,7 @@ def chemistry(design):
 
         for n in range(50):
             q_params, prev_energy = opt.step_and_cost(cost_fn, q_params)
-            print(f"--- Step: {n}, Energy: {cost_fn(q_params):.8f}")
+            # print(f"--- Step: {n}, Energy: {cost_fn(q_params):.8f}")
         energy.append(cost_fn(q_params))
     
     metrics = np.mean(energy)
