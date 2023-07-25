@@ -101,6 +101,7 @@ class MCTS:
 
     def train_nodes(self):
         for i in self.nodes:
+            print(i)
             i.train()
 
 
@@ -177,7 +178,7 @@ class MCTS:
                 #         pickle.dump(report, file)
                 #     print("better model saved")
                 # print("current min_mae: {}({} sample)".format(1/self.MAX_MAEINV, num2ord(self.MAX_SAMPNUM)))
-                # print("current number of samples: {}".format(len(self.samples)))
+                print("current number of samples: {}".format(len(self.samples)))
                       
             except Exception as e:
                 print(e)
