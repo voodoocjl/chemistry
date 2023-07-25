@@ -5,8 +5,6 @@ import torch.nn as nn
 import torch.optim as optim
 import time
 from sklearn.metrics import accuracy_score, f1_score
-from datasets import MOSIDataLoaders
-from FusionModel import QNet
 from ChemModel import translator, quantum_net
 from Arguments import Arguments
 
@@ -135,7 +133,7 @@ def chemistry(design):
         return qml.expval(hamiltonian)
    
     energy = []
-    for i in range(5):
+    for i in range(10):
         q_params = 2 * pi * np.random.rand(design['layer_repe'] * args.n_qubits * 2)
         opt = qml.GradientDescentOptimizer(stepsize=0.4)
 
@@ -151,6 +149,6 @@ def chemistry(design):
 
 
 if __name__ == '__main__':
-    net = [0, 1, 0, 1, 1, 0, 2, 5, 1, 2, 3, 3]
+    net = [1, 1, 0, 0, 1, 1, 1, 4, 3, 4, 3, 1]
     design = translator(net)
     report = chemistry(design)
