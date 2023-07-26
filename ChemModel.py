@@ -16,7 +16,7 @@ def translator(net):
     p = net[6:12]
 
     # num of layer repetitions
-    layer_repe = [5, 7]
+    layer_repe = [1, 5, 7]
     updated_design['layer_repe'] = layer_repe[0]
 
     # categories of single-qubit parametric gates
