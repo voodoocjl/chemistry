@@ -83,7 +83,7 @@ if torch.cuda.is_available():
 dataset1 = TensorDataset(arch_code_test, test_label)
 dataloader1 = DataLoader(dataset1, batch_size=1000, shuffle=True)
 
-for hidden_dim in range(16, 20):
+for hidden_dim in range(32, 64, 8):
     model = Encoder(12, hidden_dim, 7)
     if torch.cuda.is_available():
         model.cuda()    

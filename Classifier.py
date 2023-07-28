@@ -183,10 +183,10 @@ class Classifier:
             arch_str = json.dumps(arch.tolist())
             predictions[arch_str] = outputs[k].detach().numpy().tolist()[0]  # arch_str -> pred_test_mae
         assert len(predictions) == len(self.nets)
-        avg_maeinv = self.sample_mean()
-        self.boundary = avg_maeinv
+        # avg_maeinv = self.sample_mean()
+        # self.boundary = avg_maeinv
         for k, v in predictions.items():
-            if v < avg_maeinv:
+            if v < 0.5:
                 samples_badness[k] = self.samples[k]  # (val_loss, test_mae)
             else:
                 samples_goodies[k] = self.samples[k]  # (val_loss, test_mae)
