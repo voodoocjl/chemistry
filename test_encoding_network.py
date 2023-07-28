@@ -7,6 +7,7 @@ from torch import nn
 import matplotlib.pyplot as plt
 from torch.utils.data import DataLoader, TensorDataset
 import time
+from sklearn.metrics import accuracy_score
 
 # torch.cuda.is_available = lambda : False
 # torch.set_num_threads(4)
@@ -19,13 +20,16 @@ class Encoder(nn.Module):
     def __init__(self, input_dim, hidden_dim, output_dim):
         super(Encoder, self).__init__()
         self.network = nn.Sequential(
-            nn.Linear(input_dim, hidden_dim),
+            nn.Linear(input_dim, 64),
             nn.Sigmoid(),
-            nn.Linear(hidden_dim, output_dim)
+            nn.Linear(64, hidden_dim),
+            nn.Sigmoid(),
+            nn.Linear(hidden_dim, output_dim)            
             )
         
     def forward(self, x):
         y = self.network(x)
+        y[:,-1] = torch.sigmoid(y[:,-1])
         return y
 
 
@@ -47,35 +51,38 @@ for row in csv_reader:
     arch_code.append(eval(row[1]))
     energy.append(eval(row[3]))
 
-arch_code_train = torch.from_numpy(np.asarray(arch_code[:2000], dtype=np.float32))
-energy_train = torch.from_numpy(np.asarray(energy[:2000], dtype=np.float32))
-
 def get_label(energy):
     label = torch.zeros_like(energy)
     for i in range(energy.shape[0]): 
-        label[i] = energy[i] > energy.mean()
+        label[i] = energy[i] < energy.mean()
     return label
+
+arch_code_train = torch.from_numpy(np.asarray(arch_code[:2000], dtype=np.float32))
+energy_train = torch.from_numpy(np.asarray(energy[:2000], dtype=np.float32))
+label = get_label(energy_train)
 
 if torch.cuda.is_available():
     arch_code_train = arch_code_train.cuda()
     energy_train = energy_train.cuda()
-    # label = label.cuda()
+    label = label.cuda()
 
-dataset = TensorDataset(arch_code_train, energy_train)
-dataloader = DataLoader(dataset, batch_size=1000, shuffle=True)
+dataset = TensorDataset(arch_code_train, label)
+dataloader = DataLoader(dataset, batch_size=128, shuffle=True)
 
-arch_code_test = torch.from_numpy(np.asarray(arch_code[2000:4000], dtype=np.float32))
-energy_test = torch.from_numpy(np.asarray(energy[2000:6000], dtype=np.float32))
+arch_code_test = torch.from_numpy(np.asarray(arch_code[2000:], dtype=np.float32))
+energy_test = torch.from_numpy(np.asarray(energy[2000:], dtype=np.float32))
+test_label = get_label(energy_test)
 
 if torch.cuda.is_available():
     arch_code_test = arch_code_test.cuda()
     energy_test = energy_test.cuda()
+    test_label = test_label.cuda()
 
-dataset1 = TensorDataset(arch_code_train, energy_train)
+dataset1 = TensorDataset(arch_code_test, test_label)
 dataloader1 = DataLoader(dataset1, batch_size=1000, shuffle=True)
 
-for hidden_dim in range(5, 6):
-    model = Encoder(12, hidden_dim, 13)
+for hidden_dim in range(8, 72, 8):
+    model = Encoder(12, hidden_dim, 7)
     if torch.cuda.is_available():
         model.cuda()    
     loss_fn = nn.MSELoss()
@@ -83,17 +90,16 @@ for hidden_dim in range(5, 6):
     
     train_loss_list, test_loss_list = [], []
     s = time.time()
-    for epoch in range(1, 4001):
+    for epoch in range(1, 3001):
         for x, y in dataloader:
             model.train()
             pred = model(x)  # shape: (2284, 21)
             
             # loss_s = loss_fn(pred[:, :12], x)
-            loss_s = loss_fn(pred[:, 6:12], x[:, 6:])
+            loss_s = loss_fn(pred[:, :6], x[:, 6:])
             loss_e = loss_fn(pred[:, -1], y)
             
-            train_loss = loss_e + loss_s
-            
+            train_loss = loss_e + 2 * loss_s            
             optimizer.zero_grad()
             train_loss.backward()
             optimizer.step()        
@@ -101,79 +107,61 @@ for hidden_dim in range(5, 6):
         if epoch % 500 == 0:
             model.eval()
             with torch.no_grad():
-                pred = model(arch_code_train)
+                pred = model(arch_code_train).cpu()
                 # error = (pred[:,-1] - energy_train).abs().mean()
-                error = loss_fn(pred[:,-1], energy_train)                
-                train_loss_list.append(error.detach().item())
-                print(epoch, error)
+                # pred_label = get_label(pred[:, -1])
+                pred_label = (pred[:, -1] > 0.5).float()
+                label = label.cpu()
+                acc = accuracy_score(pred_label.numpy(), label.numpy())
+                print(epoch, acc)
+                train_loss_list.append(acc)
     e = time.time()
     print('time: ', e-s)
 
-    s = time.time()
-    for epoch in range(1, 1001):
-        for x, y in dataloader1:
-            model.train()
-            pred = model(x)  # shape: (2284, 21)
+    # s = time.time()
+    # for epoch in range(1, 1001):
+    #     for x, y in dataloader1:
+    #         model.train()
+    #         pred = model(x)  # shape: (2284, 21)
             
-            # loss_s = loss_fn(pred[:, :12], x)
-            loss_s = loss_fn(pred[:, 6:12], x[:, 6:])
-            loss_e = loss_fn(pred[:, -1], y)
+    #         # loss_s = loss_fn(pred[:, :12], x)
+    #         # loss_s = loss_fn(pred[:, 6:12], x[:, 6:])
+    #         loss_e = loss_fn(pred[:, -1], y)
             
-            train_loss = loss_e + loss_s
+    #         train_loss = loss_e #+ loss_s
             
-            optimizer.zero_grad()
-            train_loss.backward()
-            optimizer.step()        
+    #         optimizer.zero_grad()
+    #         train_loss.backward()
+    #         optimizer.step()        
 
-        if epoch % 500 == 0:
-            model.eval()
-            with torch.no_grad():
-                pred = model(arch_code_train)
-                # error = (pred[:,-1] - energy_train).abs().mean()
-                error = loss_fn(pred[:,-1], energy_train)                
-                train_loss_list.append(error.detach().item())
-                print(epoch, error)
-    e = time.time()
-    print('time: ', e-s)
+    #     if epoch % 500 == 0:
+    #         model.eval()
+    #         with torch.no_grad():
+    #             pred = model(arch_code_test).cpu()
+    #             # error = (pred[:,-1] - energy_train).abs().mean()
+    #             # error = loss_fn(pred[:,-1], energy_train)                
+    #             # pred_label = get_label(pred[:, -1])
+    #             pred_label = (pred > 0.5).float()
+    #             test_label = test_label.cpu()
+    #             acc = accuracy_score(pred_label.numpy(), test_label.numpy())
+    #             print(epoch, acc)
+    #             train_loss_list.append(acc)
+                
+    # e = time.time()
+    # print('time: ', e-s)       
+    model.eval()
+    with torch.no_grad():
+        pred = model(arch_code_test).cpu()
+        # error = (pred[:,-1] - energy_train).abs().mean()
+        # error = loss_fn(pred[:,-1], energy_train)                
+        # pred_label = get_label(pred[:, -1])
+        pred_label = (pred[:, -1] > 0.5).float()
+        test_label = test_label.cpu()
+        acc = accuracy_score(pred_label.numpy(), test_label.numpy())
+        print("test acc:", acc)
+        train_loss_list.append(acc)
+    print(train_loss_list)
 
-        
-        # model.eval()
-        # with torch.no_grad():
-        #     pred = model(arch_code_test)
-            
-        #     if hidden_dim == 10 and epoch == 1999:
-        #         with open('pred.csv', 'a+', newline='') as res:
-        #             writer = csv.writer(res)
-        #             for i, res_ in enumerate(pred):
-        #                 formatted_arch_code = '[' + ", ".join(["{:.2f}".format(value) for value in res_[:12].tolist()]) + ']'
-        #                 writer.writerow([i, formatted_arch_code, res_[-1].item()])
-            
-        #     loss_s = loss_fn(pred[:, :19], arch_code_test)
-        #     loss_e = loss_fn(pred[:, -2], energy_test)
-            
-        #     test_loss = loss_s + loss_e
-        #     test_loss_list.append(test_loss.detach().item())
-    
-    # min_test_loss.append(min(test_loss_list))
-            
-    # plt.plot(range(1, 2001), train_loss_list, label='train loss')
-    # plt.plot(range(1, 2001), test_loss_list, label='test loss')
-    # plt.title('hidden_dim = ' + str(hidden_dim))
-    # plt.legend()
-    # plt.xlabel('epoch')
-    # plt.ylabel('loss')
-    # plt.show()
-
-
-            
-    # if hidden_dim == 10 and epoch == 1999:
-    with open('results/pred.csv', 'w', newline='') as res:
-        writer = csv.writer(res)
-        for i, res_ in enumerate(pred):
-            formatted_arch_code = '[' + ", ".join(["{:.2f}".format(value) for value in res_[:12].tolist()]) + ']'
-            writer.writerow([i, formatted_arch_code, res_[-1].item()])
-
-print(train_loss_list)
 plt.plot(range(len(train_loss_list)), train_loss_list, 'ro-')
 # plt.plot([1,2,3,4], train_loss_list, 'ro-')
 plt.title('min test loss')

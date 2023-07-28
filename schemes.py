@@ -1,3 +1,4 @@
+import pickle
 import copy
 from pennylane import numpy as np
 import torch
@@ -149,6 +150,8 @@ def chemistry(design):
 
 
 if __name__ == '__main__':
-    net = [1, 1, 0, 0, 1, 1, 1, 4, 3, 4, 3, 1]
+    with open('data/chemistry_dataset', 'rb') as json_data:
+        data = pickle.load(json_data)
+    net = '[1, 1, 0, 0, 1, 1, 1, 4, 3, 4, 3, 1]'
     design = translator(net)
     report = chemistry(design)

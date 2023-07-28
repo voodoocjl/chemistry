@@ -16,6 +16,7 @@ class LinearModel(nn.Module):
         y = self.fc(x)
         return y
 """
+torch.cuda.is_available = lambda : False
 
 class Encoder(nn.Module):
     def __init__(self, input_dim, hidden_dim, output_dim):
@@ -28,6 +29,7 @@ class Encoder(nn.Module):
         
     def forward(self, x):
         y = self.network(x)
+        y = torch.sigmoid(y)
         return y
 
 
@@ -51,12 +53,17 @@ class Classifier:
         self.boundary         = -1
         self.nets             = None
         self.maeinv           = None
+        self.labels           = None
 
-
+    def get_label(self, energy):
+        label = torch.zeros_like(energy)
+        for i in range(energy.shape[0]): 
+            label[i] = energy[i] > energy.mean()
+        return label
+    
     def update_samples(self, latest_samples):
         assert type(latest_samples) == type(self.samples)
-        sampled_nets = []
-        
+        sampled_nets = []        
         nets_maeinv  = []
         for k, v in latest_samples.items():
             net = json.loads(k)
@@ -64,17 +71,18 @@ class Classifier:
             nets_maeinv.append(v)
         self.nets = torch.from_numpy(np.asarray(sampled_nets, dtype=np.float32).reshape(-1, self.input_dim))
         self.maeinv = torch.from_numpy(np.asarray(nets_maeinv, dtype=np.float32).reshape(-1, 1))
+        self.labels = self.get_label(self.maeinv)
         self.samples = latest_samples
         if torch.cuda.is_available():
             self.nets = self.nets.cuda()
-            self.maeinv = self.maeinv.cuda()
+            self.labels = self.labels.cuda()
 
 
     def train(self):
         if self.training_counter == 0:
-            self.epochs = 20000
+            self.epochs = 200
         else:
-            self.epochs = 3000
+            self.epochs = 100
         self.training_counter += 1
         # in a rare case, one branch has no networks
         if len(self.nets) == 0:

@@ -24,7 +24,7 @@ def num2ord(num):
 
 
 class MCTS:
-    def __init__(self, search_space, tree_height, arch_code_len):
+    def __init__(self, search_space, dataset, tree_height, arch_code_len):
         assert type(search_space)    == type([])
         assert len(search_space)     >= 1
         assert type(search_space[0]) == type([])
@@ -45,6 +45,7 @@ class MCTS:
         self.MAX_MAEINV     = 0
         self.MAX_SAMPNUM    = 0
         self.sample_nodes   = []
+        self.dataset        = dataset
 
         # initialize a full tree
         total_nodes = 2**tree_height - 1
@@ -152,7 +153,12 @@ class MCTS:
                 design = translator(job)
                 # print("translated to:\n{}".format(design))
                 print("\nstart training:")
-                report = chemistry(design)
+                if job_str in self.dataset:
+                    report = {'energy': self.dataset.get(job_str)}
+                    print(report)
+                else:
+                    report = chemistry(design)
+                    
                 maeinv = -1 * report['energy']
     
                 self.DISPATCHED_JOB[job_str] = maeinv
@@ -275,12 +281,15 @@ if __name__ == '__main__':
     print("\nthe length of architecture codes:", arch_code_len)
     print("total architectures:", len(search_space))
 
+    with open('data/chemistry_dataset', 'rb') as file:
+        dataset = pickle.load(file)
+
     if os.path.isfile('results.csv') == False:
         with open('results.csv', 'w+', newline='') as res:
             writer = csv.writer(res)
             writer.writerow(['sample_id', 'arch_code', 'sample_node', 'Energy'])
 
-    agent = MCTS(search_space, 6, arch_code_len)
+    agent = MCTS(search_space, dataset, 5, arch_code_len)
     agent.search()
 
     # state_path = 'states'
