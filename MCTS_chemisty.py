@@ -95,7 +95,7 @@ class MCTS:
 
 
     def populate_prediction_data(self):
-        self.reset_node_data()
+        # self.reset_node_data()
         for k in self.search_space:
             self.ROOT.put_in_bag(k, 0.0)
 
@@ -219,7 +219,7 @@ class MCTS:
             print("finished")
             end = time.time()
             print("Running time: %s seconds" % (end - start))
-            self.print_tree()
+            # self.print_tree()
 
             # clear the data in nodes
             print("\nclear training data...")

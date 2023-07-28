@@ -20,10 +20,10 @@ class Encoder(nn.Module):
     def __init__(self, input_dim, hidden_dim, output_dim):
         super(Encoder, self).__init__()
         self.network = nn.Sequential(
-            nn.Linear(input_dim, 64),
+            nn.Linear(input_dim, hidden_dim),
             nn.Sigmoid(),
-            nn.Linear(64, hidden_dim),
-            nn.Sigmoid(),
+            # nn.Linear(64, hidden_dim),
+            # nn.Sigmoid(),
             nn.Linear(hidden_dim, output_dim)            
             )
         
@@ -57,6 +57,8 @@ def get_label(energy):
         label[i] = energy[i] < energy.mean()
     return label
 
+true_label = get_label(torch.tensor(energy))
+
 arch_code_train = torch.from_numpy(np.asarray(arch_code[:2000], dtype=np.float32))
 energy_train = torch.from_numpy(np.asarray(energy[:2000], dtype=np.float32))
 label = get_label(energy_train)
@@ -70,18 +72,18 @@ dataset = TensorDataset(arch_code_train, label)
 dataloader = DataLoader(dataset, batch_size=128, shuffle=True)
 
 arch_code_test = torch.from_numpy(np.asarray(arch_code[2000:], dtype=np.float32))
-energy_test = torch.from_numpy(np.asarray(energy[2000:], dtype=np.float32))
-test_label = get_label(energy_test)
+# energy_test = torch.from_numpy(np.asarray(energy[2000:], dtype=np.float32))
+test_label = true_label[2000:]
 
 if torch.cuda.is_available():
     arch_code_test = arch_code_test.cuda()
-    energy_test = energy_test.cuda()
+    # energy_test = energy_test.cuda()
     test_label = test_label.cuda()
 
 dataset1 = TensorDataset(arch_code_test, test_label)
 dataloader1 = DataLoader(dataset1, batch_size=1000, shuffle=True)
 
-for hidden_dim in range(8, 72, 8):
+for hidden_dim in range(16, 20):
     model = Encoder(12, hidden_dim, 7)
     if torch.cuda.is_available():
         model.cuda()    
@@ -99,12 +101,12 @@ for hidden_dim in range(8, 72, 8):
             loss_s = loss_fn(pred[:, :6], x[:, 6:])
             loss_e = loss_fn(pred[:, -1], y)
             
-            train_loss = loss_e + 2 * loss_s            
+            train_loss = loss_e + 0.5 * loss_s            
             optimizer.zero_grad()
             train_loss.backward()
             optimizer.step()        
 
-        if epoch % 500 == 0:
+        if epoch % 500 == 1:
             model.eval()
             with torch.no_grad():
                 pred = model(arch_code_train).cpu()

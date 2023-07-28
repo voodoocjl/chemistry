@@ -43,7 +43,7 @@ class Classifier:
         self.training_counter = 0
         self.node_layer       = ceil(log2(node_id + 2) - 1)
         self.hidden_dims      = [5, 6, 7, 8, 9, 10]
-        self.model            = Encoder(input_dim, self.hidden_dims[self.node_layer], input_dim+1)
+        self.model            = Encoder(input_dim, self.hidden_dims[self.node_layer], 6 + 1)
         if torch.cuda.is_available():
             self.model.cuda()
         self.loss_fn          = nn.MSELoss()
@@ -80,22 +80,22 @@ class Classifier:
 
     def train(self):
         if self.training_counter == 0:
-            self.epochs = 200
+            self.epochs = 4000
         else:
-            self.epochs = 100
+            self.epochs = 1000
         self.training_counter += 1
         # in a rare case, one branch has no networks
         if len(self.nets) == 0:
             return
         for epoch in range(self.epochs):
             nets = self.nets
-            maeinv = self.maeinv
+            labels = self.labels
             # clear grads
             self.optimizer.zero_grad()
             # forward to get predicted values
             outputs = self.model(nets)
-            loss_s = self.loss_fn(outputs[:, :12], nets)
-            loss_t = self.loss_fn(outputs[:, -1].reshape(-1, 1), maeinv)
+            loss_s = self.loss_fn(outputs[:, :6], nets[:, 6:])
+            loss_t = self.loss_fn(outputs[:, -1], labels.reshape(-1))
             loss = loss_s + loss_t
             loss.backward()  # back props
             nn.utils.clip_grad_norm_(self.model.parameters(), 5)
@@ -131,10 +131,10 @@ class Classifier:
         if len(remaining) == 0:
             return samples_goodies, samples_badness
         predictions = self.predict(remaining)  # arch_str -> pred_test_mae
-        avg_maeinv  = self.sample_mean()
-        self.boundary = avg_maeinv
+        # avg_maeinv  = self.sample_mean()
+        # self.boundary = avg_maeinv
         for k, v in predictions.items():
-            if v < avg_maeinv:
+            if v < 0.5:
                 samples_badness[k] = (0.0, v)
             else:
                 samples_goodies[k] = (0.0, v)
