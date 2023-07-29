@@ -9,6 +9,8 @@ result_file = os.path.join(dir_path, 'results.csv')
 with open(dataset_file, 'rb') as file:
     dataset = pickle.load(file)
 
+print("size:", len(dataset))
+
 csv_reader = csv.reader(open(result_file))
 
 arch_code, energy = [], []
@@ -25,3 +27,4 @@ for i in range(len(arch_code)):
 with open(dataset_file, 'wb') as file:
     pickle.dump(dataset, file)
 
+print("size:", len(dataset))
