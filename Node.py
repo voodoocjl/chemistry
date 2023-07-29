@@ -22,6 +22,7 @@ class Node:
         self.x_bar         = float("inf")
         self.n             = 0
         self.uct           = 0
+        self.counter       = 0
 
         self.kids          = []
         self.bag           = {}
@@ -80,6 +81,7 @@ class Node:
         name += (self.pad_str_to_8chars(' uct:{0:.4f}   '.format(round(self.get_uct(Cp=0.5), 4))))
 
         name += self.pad_str_to_8chars('n:' + str(self.n))
+        name += self.pad_str_to_8chars('visit:' + str(self.counter))
         name += self.pad_str_to_8chars('sp:' + str(len(self.bag)))
         name += (self.pad_str_to_8chars('g_k:' + str(len(self.good_kid_data))))
         name += (self.pad_str_to_8chars('b_k:' + str(len(self.bad_kid_data))))
@@ -106,10 +108,10 @@ class Node:
             return float('inf')
         if self.n == 0:
             return float('inf')
-        coeff = math.pow(2, (6 - ceil(log2(self.id + 2)))) 
-        if len(self.bag) < coeff * 20:
+        coeff = 2 ** (5 - ceil(log2(self.id + 2))) 
+        if len(self.bag) < coeff * 100:
             return 0
-        return self.x_bar + 2*Cp*math.sqrt(2*math.log(self.parent.n)/self.n)
+        return self.x_bar + Cp*math.sqrt(2*math.log(self.parent.n)/(self.n + self.counter))
 
 
     def get_xbar(self):

@@ -32,7 +32,7 @@ class MCTS:
         self.search_space   = search_space
         self.ARCH_CODE_LEN  = arch_code_len
         self.ROOT           = None
-        self.Cp             = 0.2
+        self.Cp             = 0.5
         self.nodes          = []
         self.samples        = {}
         self.TASK_QUEUE     = []
@@ -138,7 +138,7 @@ class MCTS:
             for i in curt_node.kids:
                 UCT.append(i.get_uct(self.Cp))
             curt_node = curt_node.kids[np.random.choice(np.argwhere(UCT == np.amax(UCT)).reshape(-1), 1)[0]]
-
+            self.nodes[curt_node.id].counter += 1
         return curt_node
 
 
@@ -241,6 +241,7 @@ class MCTS:
                 # select
                 shift = 1
                 target_bin   = self.select()
+                id = target_bin.id
                 sampled_arch = target_bin.sample_arch()
                 # NOTED: the sampled arch can be None
                 if sampled_arch is not None:
@@ -254,7 +255,7 @@ class MCTS:
                         self.sample_nodes.append(target_bin.id-15)
                 else:
                     # trail 1: pick a network from the left leaf                
-                    id = target_bin.id - shift
+                    id = id - shift
                     n = self.nodes[id]
                     sampled_arch = n.sample_arch()
                     if sampled_arch is not None:
@@ -274,7 +275,8 @@ class MCTS:
                                     if json.dumps(sampled_arch) not in self.DISPATCHED_JOB:
                                         self.TASK_QUEUE.append(sampled_arch)
                                         self.search_space.remove(sampled_arch)
-                                        self.sample_nodes.append(n.id-15)               
+                                        self.sample_nodes.append(n.id-15)
+                # self.nodes[id].counter += 1               
             self.ITERATION += 1
 
 
@@ -305,7 +307,7 @@ if __name__ == '__main__':
     files = os.listdir(state_path)
     if files:
         files.sort(key=lambda x: os.path.getmtime(os.path.join(state_path, x)))
-        node_path = os.path.join(state_path, files[-20])
+        node_path = os.path.join(state_path, files[-1])
         # node_path = 'states/mcts_agent_750'
         with open(node_path, 'rb') as json_data:
             agent = pickle.load(json_data)
