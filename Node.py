@@ -1,5 +1,6 @@
 import json
 import math
+from math import log2, ceil
 import random
 import numpy as np
 from Classifier import Classifier
@@ -31,6 +32,7 @@ class Node:
 
         self.is_leaf       = True
         self.id            = Node.obj_counter
+        self.layer        = ceil(log2(self.id + 2) - 1)
         self.classifier    = Classifier({}, self.ARCH_CODE_LEN, self.id)
 
         # insert current node into the kids of parent
@@ -104,6 +106,9 @@ class Node:
             return float('inf')
         if self.n == 0:
             return float('inf')
+        coeff = math.pow(2, (6 - ceil(log2(self.id + 2)))) 
+        if len(self.bag) < coeff * 20:
+            return 0
         return self.x_bar + 2*Cp*math.sqrt(2*math.log(self.parent.n)/self.n)
 
 
@@ -161,4 +166,5 @@ class Node:
             return None
         net_str = random.choice(list(self.bag.keys()))
         del self.bag[net_str]
+        del self.parent.bag[net_str]
         return json.loads(net_str)

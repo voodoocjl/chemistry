@@ -24,7 +24,7 @@ def num2ord(num):
 
 
 class MCTS:
-    def __init__(self, search_space, dataset, tree_height, arch_code_len):
+    def __init__(self, search_space, tree_height, arch_code_len):
         assert type(search_space)    == type([])
         assert len(search_space)     >= 1
         assert type(search_space[0]) == type([])
@@ -32,7 +32,7 @@ class MCTS:
         self.search_space   = search_space
         self.ARCH_CODE_LEN  = arch_code_len
         self.ROOT           = None
-        self.Cp             = 0.5
+        self.Cp             = 0.2
         self.nodes          = []
         self.samples        = {}
         self.TASK_QUEUE     = []
@@ -45,7 +45,8 @@ class MCTS:
         self.MAX_MAEINV     = 0
         self.MAX_SAMPNUM    = 0
         self.sample_nodes   = []
-        self.dataset        = dataset
+        
+        self.tree_height    = tree_height
 
         # initialize a full tree
         total_nodes = 2**tree_height - 1
@@ -153,8 +154,8 @@ class MCTS:
                 design = translator(job)
                 # print("translated to:\n{}".format(design))
                 print("\nstart training:")
-                if job_str in self.dataset:
-                    report = {'energy': self.dataset.get(job_str)}
+                if job_str in dataset:
+                    report = {'energy': dataset.get(job_str)}
                     print(report)
                 else:
                     report = chemistry(design)
@@ -238,34 +239,42 @@ class MCTS:
 
             for i in range(0, 50):
                 # select
+                shift = 1
                 target_bin   = self.select()
                 sampled_arch = target_bin.sample_arch()
                 # NOTED: the sampled arch can be None
                 if sampled_arch is not None:
                 # TODO: back-propogate an architecture
                 # push the arch into task queue
-                    print("\nselected node" + str(target_bin.id-31) + " in leaf layer")
+                    print("\nselected node " + str(target_bin.id-15) + " in leaf layer")
                     print("sampled arch:", sampled_arch)
                     if json.dumps(sampled_arch) not in self.DISPATCHED_JOB:
                         self.TASK_QUEUE.append(sampled_arch)
                         self.search_space.remove(sampled_arch)
-                        self.sample_nodes.append(target_bin.id-31)
+                        self.sample_nodes.append(target_bin.id-15)
                 else:
-                    # trail 1: pick a network from the best leaf
-                    for n in self.nodes:
-                        if n.is_leaf == True:
-                            sampled_arch = n.sample_arch()
-                            if sampled_arch is not None:
-                                print("\nselected node" + str(n.id-31) + " in leaf layer")
-                                print("sampled arch:", sampled_arch)
-                                if json.dumps(sampled_arch) not in self.DISPATCHED_JOB:
-                                    self.TASK_QUEUE.append(sampled_arch)
-                                    self.search_space.remove(sampled_arch)
-                                    self.sample_nodes.append(n.id-31)
-                                    break
-                            else:
-                                continue
-
+                    # trail 1: pick a network from the left leaf                
+                    id = target_bin.id - shift
+                    n = self.nodes[id]
+                    sampled_arch = n.sample_arch()
+                    if sampled_arch is not None:
+                        print("\nselected node " + str(n.id-15) + " in leaf layer")
+                        print("sampled arch:", sampled_arch)
+                        if json.dumps(sampled_arch) not in self.DISPATCHED_JOB:
+                            self.TASK_QUEUE.append(sampled_arch)
+                            self.search_space.remove(sampled_arch)
+                            self.sample_nodes.append(n.id-15)                                                        
+                    else:
+                        for n in self.nodes:
+                            if n.is_leaf == True:
+                                sampled_arch = n.sample_arch()
+                                if sampled_arch is not None:
+                                    print("\nselected node" + str(n.id-15) + " in leaf layer")
+                                    print("sampled arch:", sampled_arch)
+                                    if json.dumps(sampled_arch) not in self.DISPATCHED_JOB:
+                                        self.TASK_QUEUE.append(sampled_arch)
+                                        self.search_space.remove(sampled_arch)
+                                        self.sample_nodes.append(n.id-15)               
             self.ITERATION += 1
 
 
@@ -289,22 +298,23 @@ if __name__ == '__main__':
             writer = csv.writer(res)
             writer.writerow(['sample_id', 'arch_code', 'sample_node', 'Energy'])
 
-    agent = MCTS(search_space, dataset, 5, arch_code_len)
-    agent.search()
+    # agent = MCTS(search_space, dataset, 5, arch_code_len)
+    # agent.search()
 
-    # state_path = 'states'
-    # files = os.listdir(state_path)
-    # if files:
-    #     files.sort(key=lambda x: os.path.getmtime(os.path.join(state_path, x)))
-    #     node_path = os.path.join(state_path, files[-1])
-    #     with open(node_path, 'rb') as json_data:
-    #         agent = pickle.load(json_data)
-    #     print("\nresume searching,", agent.ITERATION, "iterations completed before")
-    #     print("=====>loads:", len(agent.nodes), "nodes")
-    #     print("=====>loads:", len(agent.samples), "samples")
-    #     print("=====>loads:", len(agent.DISPATCHED_JOB), "dispatched jobs")
-    #     print("=====>loads:", len(agent.TASK_QUEUE), "task_queue jobs")
-    #     agent.search()
-    # else:
-    #     agent = MCTS(search_space, 6, arch_code_len)
-    #     agent.search()
+    state_path = 'states'
+    files = os.listdir(state_path)
+    if files:
+        files.sort(key=lambda x: os.path.getmtime(os.path.join(state_path, x)))
+        node_path = os.path.join(state_path, files[-20])
+        # node_path = 'states/mcts_agent_750'
+        with open(node_path, 'rb') as json_data:
+            agent = pickle.load(json_data)
+        print("\nresume searching,", agent.ITERATION, "iterations completed before")
+        print("=====>loads:", len(agent.nodes), "nodes")
+        print("=====>loads:", len(agent.samples), "samples")
+        print("=====>loads:", len(agent.DISPATCHED_JOB), "dispatched jobs")
+        print("=====>loads:", len(agent.TASK_QUEUE), "task_queue jobs from node:", agent.sample_nodes[0])       
+        agent.search()
+    else:
+        agent = MCTS(search_space, 5, arch_code_len)
+        agent.search()

@@ -1,6 +1,5 @@
-import os
 import random
-import csv
+import pickle
 import numpy as np
 import torch
 from torch import nn
@@ -39,17 +38,13 @@ random.seed(seed)
 np.random.seed(seed)
 torch.random.manual_seed(seed)
 
-if os.path.isfile('pred.csv') == False:
-    with open('pred.csv', 'w+', newline='') as res:
-        writer = csv.writer(res)
-        writer.writerow(['sample_id', 'arch_code', 'val_loss', 'test_mae'])
+with open('data/chemistry_dataset', 'rb') as file:
+    dataset = pickle.load(file)
 
-# read code, val loss and test mae from .csv file
-csv_reader = csv.reader(open('results/training.csv'))
 arch_code, energy = [], []
-for row in csv_reader:
-    arch_code.append(eval(row[1]))
-    energy.append(eval(row[3]))
+for key in dataset:
+    arch_code.append(eval(key))
+    energy.append(dataset[key])
 
 def get_label(energy):
     label = torch.zeros_like(energy)
@@ -101,12 +96,12 @@ for hidden_dim in range(32, 64, 8):
             loss_s = loss_fn(pred[:, :6], x[:, 6:])
             loss_e = loss_fn(pred[:, -1], y)
             
-            train_loss = loss_e + 0.5 * loss_s            
+            train_loss = loss_e + 0.1 * loss_s            
             optimizer.zero_grad()
             train_loss.backward()
             optimizer.step()        
 
-        if epoch % 500 == 1:
+        if epoch % 500 == 0:
             model.eval()
             with torch.no_grad():
                 pred = model(arch_code_train).cpu()
