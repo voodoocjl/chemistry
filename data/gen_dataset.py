@@ -5,6 +5,7 @@ import os
 dir_path = os.path.dirname(os.path.realpath(__file__))
 dataset_file = os.path.join(dir_path, 'chemistry_dataset')
 result_file = os.path.join(dir_path, 'results.csv')
+# result_file = os.path.join(dir_path, 'results_sampling.csv')
 
 with open(dataset_file, 'rb') as file:
     dataset = pickle.load(file)

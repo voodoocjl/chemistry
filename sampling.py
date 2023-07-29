@@ -166,7 +166,7 @@ if __name__ == '__main__':
     print("there are {} leaf nodes in total".format(len(leaf_nodes)))
     
     energy_list = []
-    for j in [0, 1, 2, 3, 8, 12, 16, 20, 28, 29, 30, 31]:  # leaf nodes for sampling
+    for j in [0, 1, 2, 3, 12, 13, 14, 15]:  # leaf nodes for sampling
     # for j in [4, 8, 12, 16, 20, 24,]:
         energy = []
         for sample_no in range(100):  # the number of nodes needed to be sampled
