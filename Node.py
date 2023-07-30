@@ -79,9 +79,13 @@ class Node:
 
         name += (self.pad_str_to_8chars(' val:{0:.4f}   '.format(round(self.get_xbar(), 4))))
         name += (self.pad_str_to_8chars(' uct:{0:.4f}   '.format(round(self.get_uct(Cp=0.5), 4))))
-
         name += self.pad_str_to_8chars('n:' + str(self.n))
         name += self.pad_str_to_8chars('visit:' + str(self.counter))
+        if self.is_leaf == False:
+            name += self.pad_str_to_8chars('acc:{0:.4f} '.format(round(self.classifier.training_accuracy[-1], 4)))
+        else:
+            name += self.pad_str_to_8chars('acc: ---- ')
+
         name += self.pad_str_to_8chars('sp:' + str(len(self.bag)))
         name += (self.pad_str_to_8chars('g_k:' + str(len(self.good_kid_data))))
         name += (self.pad_str_to_8chars('b_k:' + str(len(self.bad_kid_data))))
@@ -91,14 +95,17 @@ class Node:
             parent = self.parent.get_name()
         parent = self.pad_str_to_8chars(parent)
 
-        name += (' parent:' + parent)
-
-        kids = ''
-        kid = ''
-        for k in self.kids:
-            kid = self.pad_str_to_8chars(k.get_name())
-            kids += kid
-        name += (' kids:' + kids)
+        name += (' parent:' + parent)       
+        # kids = ''
+        # kid = ''
+        # for k in self.kids:
+        #     kid = self.pad_str_to_8chars(k.get_name())
+        #     kids += kid
+        # name += (' kids:' + kids)
+        if self.is_leaf:
+            name = Color.YELLOW + name +Color.RESET
+        elif self.layer == 2:
+            name = Color.GREEN + name +Color.RESET
 
         return name
 
@@ -170,3 +177,13 @@ class Node:
         del self.bag[net_str]
         del self.parent.bag[net_str]
         return json.loads(net_str)
+    
+class Color:
+    RED = '\033[31m'
+    GREEN = '\033[32m'
+    YELLOW = '\033[33m'
+    BLUE = '\033[34m'
+    MAGENTA = '\033[35m'
+    CYAN = '\033[36m'
+    WHITE = '\033[37m'
+    RESET = '\033[0m'

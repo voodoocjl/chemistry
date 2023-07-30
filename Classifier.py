@@ -4,6 +4,8 @@ import torch
 import numpy as np
 import torch.nn as nn
 from torch import optim
+from sklearn.metrics import accuracy_score
+
 
 """
 class LinearModel(nn.Module):
@@ -50,6 +52,7 @@ class Classifier:
         self.l_rate           = 0.001
         self.optimizer        = optim.Adam(self.model.parameters(), lr=self.l_rate, betas=(0.9, 0.999), eps=1e-08)
         self.epochs           = []
+        self.training_accuracy = [0]
         self.boundary         = -1
         self.nets             = None
         self.maeinv           = None
@@ -100,6 +103,13 @@ class Classifier:
             loss.backward()  # back props
             nn.utils.clip_grad_norm_(self.model.parameters(), 5)
             self.optimizer.step()  # update the parameters
+
+        # training accuracy 
+        pred = self.model(nets).cpu()
+        pred_label = (pred[:, -1] > 0.5).float()
+        labels = self.labels.reshape(-1).cpu()
+        acc = accuracy_score(pred_label.numpy(), labels.numpy())
+        self.training_accuracy.append(acc)
 
 
     def predict(self, remaining):
