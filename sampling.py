@@ -120,19 +120,21 @@ if __name__ == '__main__':
     np.random.seed(42)
     torch.random.manual_seed(42)
     
+    with open('data/chemistry_dataset', 'rb') as file:
+        dataset = pickle.load(file)
+    
     if os.path.isfile('results_sampling.csv') == False:
         with open('results_sampling.csv', 'w+', newline='') as res:
             writer = csv.writer(res)
-            writer.writerow(['sample_node', 'sample_no', 'arch_code', 'val_loss', 'test_mae', 'test_corr',
-                             'test_multi_acc', 'test_bi_acc', 'test_f1'])
+            writer.writerow(['sample_id', 'arch_code', 'sample_node', 'Energy'])
             
     
     state_path = 'states'
     files = os.listdir(state_path)
     if files:
         files.sort(key=lambda x: os.path.getmtime(os.path.join(state_path, x)))
-        node_path = os.path.join(state_path, files[-1])
-        # node_path = 'states/mcts_agent_10000'
+        # node_path = os.path.join(state_path, files[-1])
+        node_path = 'states/mcts_agent_10000'
         with open(node_path, 'rb') as json_data:
             agent = pickle.load(json_data)
         with open('search_space_1', 'rb') as file:
@@ -178,13 +180,17 @@ if __name__ == '__main__':
             design = translator(sampled_arch)
             # print("translated to:\n{}".format(design))
             print("\nstart training:")
-            report = chemistry(design)
+            if str(sampled_arch) in dataset:
+                report = {'energy': dataset.get(str(sampled_arch))}
+                print(report)
+            else:
+                report = chemistry(design)
+            
             metrics = report['energy']
             energy.append(metrics)
             with open('results_sampling.csv', 'a+', newline='') as res:
                 writer = csv.writer(res)                
-                writer.writerow([j, sample_no, sampled_arch, metrics])
-            print("results of current model saved")
+                writer.writerow([j, sampled_arch, sample_no, metrics])           
         energy_list.append(np.mean(energy))
         print("\033[1;33;40mResult: {}\033[0m".format(energy_list))
         
