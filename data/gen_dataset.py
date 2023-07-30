@@ -3,27 +3,37 @@ import pickle
 import os
 
 dir_path = os.path.dirname(os.path.realpath(__file__))
+files = os.listdir(dir_path)
 dataset_file = os.path.join(dir_path, 'chemistry_dataset')
-result_file = os.path.join(dir_path, 'results.csv')
+# result_file = os.path.join(dir_path, 'results.csv')
 # result_file = os.path.join(dir_path, 'results_sampling.csv')
+
 
 with open(dataset_file, 'rb') as file:
     dataset = pickle.load(file)
 
 print("size:", len(dataset))
 
-csv_reader = csv.reader(open(result_file))
+for file in files:
+    extension = os.path.splitext(file)[1]
+    if extension == '.csv':        
+        csv_reader = csv.reader(open(os.path.join(dir_path, file)))
 
-arch_code, energy = [], []
-for row in csv_reader:  
-    arch_code.append(row[1])
-    energy.append(row[3])
-arch_code.pop(0)
-energy.pop(0)
-
-for i in range(len(arch_code)):
-    if arch_code[i] not in dataset:
-        dataset[arch_code[i]] = eval(energy[i])
+        arch_code, energy = [], []
+        for row in csv_reader:
+            arch_code.append(row[1])
+            energy.append(row[3])
+        try:
+            assert arch_code[0] == 'arch_code' and energy[0] == 'Energy'
+        except AssertionError:
+            print(file, 'is a wrong csv files')
+            continue
+        arch_code.pop(0)
+        energy.pop(0)
+        
+        for i in range(len(arch_code)):
+            if arch_code[i] not in dataset:
+                dataset[arch_code[i]] = eval(energy[i])
 
 with open(dataset_file, 'wb') as file:
     pickle.dump(dataset, file)

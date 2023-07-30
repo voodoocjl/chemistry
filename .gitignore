@@ -170,6 +170,7 @@ states/
 states_old/
 pred.csv
 test
-data/results_sampling_1700.csv
+data/*.csv
 results - 副本.csv
 results - 副本 (2).csv
+data/results1.csv
