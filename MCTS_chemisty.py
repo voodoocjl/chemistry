@@ -133,6 +133,7 @@ class MCTS:
     def select(self):
         self.reset_to_root()
         curt_node = self.ROOT
+        self.ROOT.counter += 1
         while curt_node.is_leaf == False:
             UCT = []
             for i in curt_node.kids:
@@ -308,7 +309,7 @@ if __name__ == '__main__':
     if files:
         files.sort(key=lambda x: os.path.getmtime(os.path.join(state_path, x)))
         node_path = os.path.join(state_path, files[-1])
-        # node_path = 'states/mcts_agent_750'
+        # node_path = 'states/mcts_agent_4000'
         with open(node_path, 'rb') as json_data:
             agent = pickle.load(json_data)
         print("\nresume searching,", agent.ITERATION, "iterations completed before")

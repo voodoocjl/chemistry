@@ -22,7 +22,7 @@ class Node:
         self.x_bar         = float("inf")
         self.n             = 0
         self.uct           = 0
-        self.counter       = 0
+        self.counter       = 1
 
         self.kids          = []
         self.bag           = {}
@@ -115,10 +115,11 @@ class Node:
             return float('inf')
         if self.n == 0:
             return float('inf')
-        coeff = 2 ** (5 - ceil(log2(self.id + 2))) 
-        if len(self.bag) < coeff * 100:
-            return 0
-        return self.x_bar + Cp*math.sqrt(2*math.log(self.parent.n)/(self.n + self.counter))
+        # coeff = 2 ** (5 - ceil(log2(self.id + 2))) 
+        # if len(self.bag) < coeff * 100:
+        #     return 0
+        # return self.x_bar + Cp*math.sqrt(2*math.log(self.parent.n)/(self.n + self.counter))
+        return self.x_bar + Cp*math.sqrt(2*math.log(self.parent.counter)/self.counter)
 
 
     def get_xbar(self):
