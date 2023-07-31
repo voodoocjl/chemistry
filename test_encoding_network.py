@@ -9,7 +9,7 @@ from torch.utils.data import DataLoader, TensorDataset
 import time
 from sklearn.metrics import accuracy_score
 
-# torch.cuda.is_available = lambda : False
+torch.cuda.is_available = lambda : False
 # torch.set_num_threads(4)
 
 # torch.backends.cudnn.enabled = False
@@ -61,8 +61,9 @@ def get_label(energy):
     return label
 
 true_label = get_label(torch.tensor(energy))
-arch_code_train = torch.from_numpy(np.asarray(arch_code[:2000], dtype=np.float32))
-energy_train = torch.from_numpy(np.asarray(energy[:2000], dtype=np.float32))
+t_size = 10000
+arch_code_train = torch.from_numpy(np.asarray(arch_code[:t_size], dtype=np.float32))
+energy_train = torch.from_numpy(np.asarray(energy[:t_size], dtype=np.float32))
 label = get_label(energy_train)
 
 if torch.cuda.is_available():
@@ -73,9 +74,9 @@ if torch.cuda.is_available():
 dataset = TensorDataset(arch_code_train, label)
 dataloader = DataLoader(dataset, batch_size=128, shuffle=True)
 
-arch_code_test = torch.from_numpy(np.asarray(arch_code[2000:], dtype=np.float32))
+arch_code_test = torch.from_numpy(np.asarray(arch_code[t_size:], dtype=np.float32))
 # energy_test = torch.from_numpy(np.asarray(energy[2000:], dtype=np.float32))
-test_label = true_label[2000:]
+test_label = true_label[t_size:]
 
 if torch.cuda.is_available():
     arch_code_test = arch_code_test.cuda()
@@ -89,7 +90,7 @@ print("dataset size: ", len(energy))
 print("training size: ", len(energy_train))
 print("test size: ", len(arch_code_test))
 
-for hidden_dim in range(32, 64, 8):
+for hidden_dim in range(32, 128, 16):
     model = Encoder(12, hidden_dim, 7)
     if torch.cuda.is_available():
         model.cuda()    
