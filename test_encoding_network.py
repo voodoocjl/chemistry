@@ -1,5 +1,6 @@
 import random
 import pickle
+import csv
 import numpy as np
 import torch
 from torch import nn
@@ -46,6 +47,13 @@ for key in dataset:
     arch_code.append(eval(key))
     energy.append(dataset[key])
 
+# # read code, val loss and test mae from .csv file
+# csv_reader = csv.reader(open('results/training.csv'))
+# arch_code, energy = [], []
+# for row in csv_reader:
+#     arch_code.append(eval(row[1]))
+#     energy.append(eval(row[3]))
+
 def get_label(energy):
     label = torch.zeros_like(energy)
     for i in range(energy.shape[0]): 
@@ -53,7 +61,6 @@ def get_label(energy):
     return label
 
 true_label = get_label(torch.tensor(energy))
-
 arch_code_train = torch.from_numpy(np.asarray(arch_code[:2000], dtype=np.float32))
 energy_train = torch.from_numpy(np.asarray(energy[:2000], dtype=np.float32))
 label = get_label(energy_train)
@@ -77,6 +84,10 @@ if torch.cuda.is_available():
 
 dataset1 = TensorDataset(arch_code_test, test_label)
 dataloader1 = DataLoader(dataset1, batch_size=1000, shuffle=True)
+
+print("dataset size: ", len(energy))
+print("training size: ", len(energy_train))
+print("test size: ", len(arch_code_test))
 
 for hidden_dim in range(32, 64, 8):
     model = Encoder(12, hidden_dim, 7)
@@ -115,37 +126,6 @@ for hidden_dim in range(32, 64, 8):
     e = time.time()
     print('time: ', e-s)
 
-    # s = time.time()
-    # for epoch in range(1, 1001):
-    #     for x, y in dataloader1:
-    #         model.train()
-    #         pred = model(x)  # shape: (2284, 21)
-            
-    #         # loss_s = loss_fn(pred[:, :12], x)
-    #         # loss_s = loss_fn(pred[:, 6:12], x[:, 6:])
-    #         loss_e = loss_fn(pred[:, -1], y)
-            
-    #         train_loss = loss_e #+ loss_s
-            
-    #         optimizer.zero_grad()
-    #         train_loss.backward()
-    #         optimizer.step()        
-
-    #     if epoch % 500 == 0:
-    #         model.eval()
-    #         with torch.no_grad():
-    #             pred = model(arch_code_test).cpu()
-    #             # error = (pred[:,-1] - energy_train).abs().mean()
-    #             # error = loss_fn(pred[:,-1], energy_train)                
-    #             # pred_label = get_label(pred[:, -1])
-    #             pred_label = (pred > 0.5).float()
-    #             test_label = test_label.cpu()
-    #             acc = accuracy_score(pred_label.numpy(), test_label.numpy())
-    #             print(epoch, acc)
-    #             train_loss_list.append(acc)
-                
-    # e = time.time()
-    # print('time: ', e-s)       
     model.eval()
     with torch.no_grad():
         pred = model(arch_code_test).cpu()
