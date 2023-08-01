@@ -8,6 +8,7 @@ import time
 from sklearn.metrics import accuracy_score, f1_score
 from ChemModel import translator, quantum_net
 from Arguments import Arguments
+import random, os, csv
 
 
 def get_param_num(model):
@@ -150,8 +151,34 @@ def chemistry(design):
 
 
 if __name__ == '__main__':
-    with open('data/chemistry_dataset', 'rb') as json_data:
-        data = pickle.load(json_data)
-    net = [1, 1, 0, 1, 1, 1, 2, 5, 5, 2, 2, 4]
-    design = translator(net)
-    report = chemistry(design)
+    # with open('data/chemistry_dataset', 'rb') as json_data:
+    #     data = pickle.load(json_data)
+    # net = [1, 1, 0, 1, 1, 1, 2, 5, 5, 2, 2, 4]
+    # design = translator(net)
+    # report = chemistry(design)
+
+    random.seed(42)
+    np.random.seed(42)
+    torch.random.manual_seed(42)
+
+    with open('train_space_3', 'rb') as file:
+        search_space = pickle.load(file)
+    arch_code_len = len(search_space[0])
+    print("\nthe length of architecture codes:", arch_code_len)
+    print("total architectures:", len(search_space))
+
+    if os.path.isfile('results_2W.csv') == False:
+        with open('results_9W.csv', 'w+', newline='') as res:
+            writer = csv.writer(res)
+            writer.writerow(['sample_id', 'arch_code', 'sample_node', 'Energy'])
+
+    for i in range(len(search_space)):
+        net = search_space[i]
+        design = translator(net)
+        report = chemistry(design)
+
+        with open('results_2W.csv', 'a+', newline='') as res:
+            writer = csv.writer(res)
+            metrics = report['energy']
+            writer.writerow([(i+1), net, 0, metrics])
+        print("\nresults of current model saved")
