@@ -158,15 +158,15 @@ class MCTS:
             sample_node = self.sample_nodes.pop()
             
             try:
-                print("\nget job from QUEUE:", job)
+                # print("\nget job from QUEUE:", job)
                 
                 job_str = json.dumps(job)
                 design = translator(job)
                 # print("translated to:\n{}".format(design))
-                print("\nstart training:")
+                # print("\nstart training:")
                 if job_str in dataset:
                     report = {'energy': dataset.get(job_str)}
-                    print(report)
+                    # print(report)
                 else:
                     report = chemistry(design)
                     
@@ -181,7 +181,7 @@ class MCTS:
                     
                     metrics = report['energy']
                     writer.writerow([len(self.samples), job_str, sample_node, metrics])
-                print("\nresults of current model saved")
+                # print("\nresults of current model saved")
                 # save all models and reports
                 # torch.save(best_model.state_dict(), 'models/model_weights_'+str(len(self.samples))+'.pth')
                 # with open('reports/report_'+str(len(self.samples)), 'wb') as file:
@@ -194,7 +194,7 @@ class MCTS:
                 #         pickle.dump(report, file)
                 #     print("better model saved")
                 # print("current min_mae: {}({} sample)".format(1/self.MAX_MAEINV, num2ord(self.MAX_SAMPNUM)))
-                print("current number of samples: {}".format(len(self.samples)))
+                # print("current number of samples: {}".format(len(self.samples)))
                       
             except Exception as e:
                 print(e)
@@ -235,24 +235,13 @@ class MCTS:
             # clear the data in nodes           
             self.reset_node_data()           
 
-            print("\npopulate validation data...")
-            self.populate_validation_data()
-            print("finished")
-
-            print("\npredict and partition nets in search space...")
+            # print("\npopulate validation data...")
+            self.populate_validation_data()           
             self.predict_nodes('mean')
-
-            self.reset_node_data()
-
-            print("\npopulate validation data...")
-            self.populate_validation_data()
-            print("finished")
-
-            print("\npredict and partition nets in search space...")
+            self.reset_node_data()          
+            self.populate_validation_data()         
             self.predict_nodes()
-
             self.node_performance()
-
             self.reset_node_data()   
 
             print("\npopulate prediction data...")
@@ -275,8 +264,8 @@ class MCTS:
                 if sampled_arch is not None:
                 # TODO: back-propogate an architecture
                 # push the arch into task queue
-                    print("\nselected node " + str(target_bin.id-15) + " in leaf layer")
-                    print("sampled arch:", sampled_arch)
+                    # print("\nselected node " + str(target_bin.id-15) + " in leaf layer")
+                    # print("sampled arch:", sampled_arch)
                     if json.dumps(sampled_arch) not in self.DISPATCHED_JOB:
                         self.TASK_QUEUE.append(sampled_arch)
                         self.search_space.remove(sampled_arch)
