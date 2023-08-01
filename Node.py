@@ -160,7 +160,7 @@ class Node:
            self.n     = len(self.bag.values())
 
 
-    def predict(self, method = None):
+    def predict(self, method = None):                       
         if self.parent == None and self.is_root == True and self.is_leaf == False:
             self.good_kid_data, self.bad_kid_data = self.classifier.split_predictions(self.bag, method)
         elif self.is_leaf:
@@ -178,16 +178,25 @@ class Node:
         if method:
             self.validation = self.bag.copy()
 
+    def predict_validation(self):               
+        if self.is_leaf == False:
+            self.good_kid_data, self.bad_kid_data = self.classifier.split_predictions(self.validation)
+        if self.is_good_kid:
+            self.bag = self.parent.good_kid_data
+                  
+       
+
     def get_performance(self):
         i = 0
         for k in self.bag.keys():
             if k in self.validation:
                 i += 1
         precision = i / len(self.bag)
+        i = 0
         for k in self.validation.keys():
             if k in self.bag:
                 i += 1
-        recall = i / len(self.bag)
+        recall = i / len(self.validation)
         f1 = 2 * precision * recall / (precision + recall + 1e-6)
         return f1
         

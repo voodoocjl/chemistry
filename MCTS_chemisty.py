@@ -96,7 +96,8 @@ class MCTS:
 
     def populate_validation_data(self):        
         for k, v in validation.items():
-            self.ROOT.put_in_bag(eval(k), v)
+            self.ROOT.validation[k] = v
+        self.ROOT.bag = self.ROOT.validation.copy()
     
     def populate_prediction_data(self):
         # self.reset_node_data()
@@ -109,16 +110,17 @@ class MCTS:
             i.train()
 
 
-    def predict_nodes(self, method = None):
+    def predict_nodes(self, method = None, dataset =None):
         for i in self.nodes:
-            i.predict(method)
+            if dataset:
+                i.predict_validation()
+            else:
+                i.predict(method)
 
     def node_performance(self):
         for i in self.nodes:
             if i.is_leaf == False:
-                i.f1.append(i.kids[0].get_performance())
-            i.validation = {}
-
+                i.f1.append(i.kids[0].get_performance())   
 
     def check_leaf_bags(self):
         counter = 0
@@ -204,6 +206,10 @@ class MCTS:
 
 
     def search(self):
+        if len(self.ROOT.validation) == 0:
+            self.populate_validation_data()           
+            self.predict_nodes('mean')
+            self.reset_node_data()   
 
         while len(self.search_space) > 0:
             self.dump_all_states(len(self.samples))
@@ -235,14 +241,15 @@ class MCTS:
             # clear the data in nodes           
             self.reset_node_data()           
 
-            # print("\npopulate validation data...")
-            self.populate_validation_data()           
-            self.predict_nodes('mean')
-            self.reset_node_data()          
-            self.populate_validation_data()         
-            self.predict_nodes()
+            # print("\npopulate validation data...")                               
+            # self.ROOT.bag = self.ROOT.validation.copy()
+            # self.predict_nodes()
+            # self.node_performance()
+            # self.reset_node_data()
+
+            self.predict_nodes(None, 'validation')
             self.node_performance()
-            self.reset_node_data()   
+            self.reset_node_data()
 
             print("\npopulate prediction data...")
             self.populate_prediction_data()
@@ -292,8 +299,7 @@ class MCTS:
                                     if json.dumps(sampled_arch) not in self.DISPATCHED_JOB:
                                         self.TASK_QUEUE.append(sampled_arch)
                                         self.search_space.remove(sampled_arch)
-                                        self.sample_nodes.append(n.id-15)
-                # self.nodes[id].counter += 1               
+                                        self.sample_nodes.append(n.id-15)                              
             self.ITERATION += 1
 
 
