@@ -134,7 +134,7 @@ def chemistry(design):
         return qml.expval(hamiltonian)
    
     energy = []
-    for i in range(10):
+    for i in range(5):
         q_params = 2 * pi * np.random.rand(design['layer_repe'] * args.n_qubits * 2)
         opt = qml.GradientDescentOptimizer(stepsize=0.4)
 
@@ -152,6 +152,6 @@ def chemistry(design):
 if __name__ == '__main__':
     with open('data/chemistry_dataset', 'rb') as json_data:
         data = pickle.load(json_data)
-    net = '[1, 1, 0, 0, 1, 1, 1, 4, 3, 4, 3, 1]'
+    net = [1, 1, 0, 1, 1, 1, 2, 5, 5, 2, 2, 4]
     design = translator(net)
     report = chemistry(design)

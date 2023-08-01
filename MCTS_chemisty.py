@@ -94,7 +94,10 @@ class MCTS:
         for k, v in self.samples.items():
             self.ROOT.put_in_bag(json.loads(k), v)
 
-
+    def populate_validation_data(self):        
+        for k, v in validation.items():
+            self.ROOT.put_in_bag(eval(k), v)
+    
     def populate_prediction_data(self):
         # self.reset_node_data()
         for k in self.search_space:
@@ -106,9 +109,15 @@ class MCTS:
             i.train()
 
 
-    def predict_nodes(self):
+    def predict_nodes(self, method = None):
         for i in self.nodes:
-            i.predict()
+            i.predict(method)
+
+    def node_performance(self):
+        for i in self.nodes:
+            if i.is_leaf == False:
+                i.f1.append(i.kids[0].get_performance())
+            i.validation = {}
 
 
     def check_leaf_bags(self):
@@ -223,14 +232,32 @@ class MCTS:
             print("Running time: %s seconds" % (end - start))
             # self.print_tree()
 
-            # clear the data in nodes
-            print("\nclear training data...")
-            self.reset_node_data()
+            # clear the data in nodes           
+            self.reset_node_data()           
+
+            print("\npopulate validation data...")
+            self.populate_validation_data()
             print("finished")
+
+            print("\npredict and partition nets in search space...")
+            self.predict_nodes('mean')
+
+            self.reset_node_data()
+
+            print("\npopulate validation data...")
+            self.populate_validation_data()
+            print("finished")
+
+            print("\npredict and partition nets in search space...")
+            self.predict_nodes()
+
+            self.node_performance()
+
+            self.reset_node_data()   
 
             print("\npopulate prediction data...")
             self.populate_prediction_data()
-            print("finished")
+            print("finished")             
 
             print("\npredict and partition nets in search space...")
             self.predict_nodes()
@@ -295,6 +322,7 @@ if __name__ == '__main__':
 
     with open('data/chemistry_dataset', 'rb') as file:
         dataset = pickle.load(file)
+    validation = dict(list(dataset.items())[40000:50000])
 
     if os.path.isfile('results.csv') == False:
         with open('results.csv', 'w+', newline='') as res:

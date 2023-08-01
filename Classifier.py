@@ -134,20 +134,27 @@ class Classifier:
         return result
 
 
-    def split_predictions(self, remaining):
+    def split_predictions(self, remaining, method = None):
         assert type(remaining) == type({})
         samples_badness = {}
         samples_goodies = {}
         if len(remaining) == 0:
             return samples_goodies, samples_badness
-        predictions = self.predict(remaining)  # arch_str -> pred_test_mae
-        # avg_maeinv  = self.sample_mean()
-        # self.boundary = avg_maeinv
-        for k, v in predictions.items():
-            if v < 0.5:
-                samples_badness[k] = (0.0, v)
-            else:
-                samples_goodies[k] = (0.0, v)
+        if method == None:
+            predictions = self.predict(remaining)  # arch_str -> pred_test_mae
+            for k, v in predictions.items():
+                if v < 0.5:
+                    samples_badness[k] = v
+                else:
+                    samples_goodies[k] = v
+        else:
+            predictions = np.mean(list(remaining.values()))
+            for k, v in remaining.items():
+                if v > predictions:
+                    samples_badness[k] = v
+                else:
+                    samples_goodies[k] = v
+                
         assert len(samples_badness) + len(samples_goodies) == len(remaining)
         return samples_goodies, samples_badness
 

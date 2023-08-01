@@ -26,6 +26,8 @@ class Node:
 
         self.kids          = []
         self.bag           = {}
+        self.validation    = {}
+        self.f1            = []
 
         # data for good and bad kids, respectively
         self.good_kid_data = {}
@@ -83,12 +85,16 @@ class Node:
         name += self.pad_str_to_8chars('visit:' + str(self.counter))
         if self.is_leaf == False:
             name += self.pad_str_to_8chars('acc:{0:.4f} '.format(round(self.classifier.training_accuracy[-1], 4)))
+            name += self.pad_str_to_8chars('f1:{0:.4f}   '.format(round(self.f1[-1], 4)))
+            
         else:
             name += self.pad_str_to_8chars('acc: ---- ')
+            name += self.pad_str_to_8chars('f1:  ---- ')
+        
 
         name += self.pad_str_to_8chars('sp:' + str(len(self.bag)))
-        name += (self.pad_str_to_8chars('g_k:' + str(len(self.good_kid_data))))
-        name += (self.pad_str_to_8chars('b_k:' + str(len(self.bad_kid_data))))
+        # name += (self.pad_str_to_8chars('g_k:' + str(len(self.good_kid_data))))
+        # name += (self.pad_str_to_8chars('b_k:' + str(len(self.bad_kid_data))))
 
         parent = '----'
         if self.parent is not None:
@@ -154,9 +160,9 @@ class Node:
            self.n     = len(self.bag.values())
 
 
-    def predict(self):
+    def predict(self, method = None):
         if self.parent == None and self.is_root == True and self.is_leaf == False:
-            self.good_kid_data, self.bad_kid_data = self.classifier.split_predictions(self.bag)
+            self.good_kid_data, self.bad_kid_data = self.classifier.split_predictions(self.bag, method)
         elif self.is_leaf:
             if self.is_good_kid:
                 self.bag = self.parent.good_kid_data
@@ -165,11 +171,26 @@ class Node:
         else:
             if self.is_good_kid:
                 self.bag = self.parent.good_kid_data
-                self.good_kid_data, self.bad_kid_data = self.classifier.split_predictions(self.parent.good_kid_data)
+                self.good_kid_data, self.bad_kid_data = self.classifier.split_predictions(self.parent.good_kid_data, method)
             else:
                 self.bag = self.parent.bad_kid_data
-                self.good_kid_data, self.bad_kid_data = self.classifier.split_predictions(self.parent.bad_kid_data)
+                self.good_kid_data, self.bad_kid_data = self.classifier.split_predictions(self.parent.bad_kid_data, method)
+        if method:
+            self.validation = self.bag.copy()
 
+    def get_performance(self):
+        i = 0
+        for k in self.bag.keys():
+            if k in self.validation:
+                i += 1
+        precision = i / len(self.bag)
+        for k in self.validation.keys():
+            if k in self.bag:
+                i += 1
+        recall = i / len(self.bag)
+        f1 = 2 * precision * recall / (precision + recall + 1e-6)
+        return f1
+        
 
     def sample_arch(self):
         if len(self.bag) == 0:
