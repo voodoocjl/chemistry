@@ -125,7 +125,7 @@ class Node:
         # if len(self.bag) < coeff * 100:
         #     return 0
         # return self.x_bar + Cp*math.sqrt(2*math.log(self.parent.n)/(self.n + self.counter))
-        return self.x_bar + Cp*math.sqrt(2*math.log(self.parent.counter)/self.counter) - 0.5 * self.f1[-1]
+        return self.x_bar + 2 * Cp*math.sqrt(2*math.log(self.parent.counter)/self.counter) - 0.5 * self.f1[-1]
 
 
     def get_xbar(self):
@@ -205,8 +205,7 @@ class Node:
         if len(self.bag) == 0:
             return None
         net_str = random.choice(list(self.bag.keys()))
-        del self.bag[net_str]
-        del self.parent.bag[net_str]
+        del self.bag[net_str]       
         return json.loads(net_str)
     
 class Color:

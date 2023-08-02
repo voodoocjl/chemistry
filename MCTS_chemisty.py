@@ -263,7 +263,7 @@ class MCTS:
             self.print_tree()
             # sampling nodes
             nodes = [0, 1, 2, 3, 12, 13, 14, 15]
-            sampling_node(self, nodes, dataset)
+            sampling_node(self, nodes, dataset, self.ITERATION)
 
             for i in range(0, 50):
                 # select

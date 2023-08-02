@@ -111,7 +111,7 @@ class MCTS:
             print(i)
         print('-'*100)
 
-def sampling_node(agent, nodes, dataset, verbose = None):
+def sampling_node(agent, nodes, dataset, iteration, verbose = None):
     leaf_nodes = []
     for i in agent.nodes:
         if i.is_leaf is True:
@@ -119,11 +119,12 @@ def sampling_node(agent, nodes, dataset, verbose = None):
     print("there are {} leaf nodes in total".format(len(leaf_nodes)))
     energy_list = []
     for j in nodes:  # leaf nodes for sampling
-    # for j in [4, 8, 12, 16, 20, 24,]:
+        target_bin = leaf_nodes[j]       
+        number = 100 if len(target_bin.bag) > 100 else len(target_bin.bag)
+        sampled_arch_list = random.sample(list(target_bin.bag.keys()), number)        
         energy = []
-        for sample_no in range(100):  # the number of nodes needed to be sampled
-            target_bin = leaf_nodes[j]
-            sampled_arch = target_bin.sample_arch()            
+        for sample_no in range(len(sampled_arch_list)):  # the number of nodes needed to be sampled
+            sampled_arch = json.loads(sampled_arch_list[sample_no])                      
             design = translator(sampled_arch)
             # print("translated to:\n{}".format(design))           
             if str(sampled_arch) in dataset:
@@ -146,10 +147,10 @@ def sampling_node(agent, nodes, dataset, verbose = None):
     if os.path.isfile('results_sampling.csv') == False:
         with open('results_sampling.csv', 'w+', newline='') as res:
             writer = csv.writer(res)
-            writer.writerow(nodes)
+            writer.writerow(['iteration', nodes])
     with open('results_sampling.csv', 'a+', newline='') as res:
         writer = csv.writer(res)                
-        writer.writerow(energy_list)
+        writer.writerow([iteration, energy_list])
 
 if __name__ == '__main__':
     # set random seed
@@ -192,11 +193,7 @@ if __name__ == '__main__':
     print("finished")
     agent.print_tree()
        
-    nodes = [0, 1, 2, 3, 12, 13, 14, 15]
-    if os.path.isfile('results_sampling.csv') == False:
-        with open('results_sampling.csv', 'w+', newline='') as res:
-            writer = csv.writer(res)
-            writer.writerow(nodes)
-    sampling_node(agent, nodes, dataset, 'print')
+    nodes = [0, 1, 4, 5, 8, 9, 14, 15]    
+    sampling_node(agent, nodes, dataset, 1)
         
     
