@@ -9,6 +9,7 @@ from Node import Node
 from ChemModel import translator
 from schemes import chemistry
 import time
+from sampling import sampling_node
 
 
 def num2ord(num):
@@ -260,6 +261,7 @@ class MCTS:
             self.check_leaf_bags()
             print("finished")
             self.print_tree()
+            sampling_node(self, [0, 1, 2, 3, 12, 13, 14, 15], dataset)
 
             for i in range(0, 50):
                 # select

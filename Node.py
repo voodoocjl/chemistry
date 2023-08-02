@@ -125,7 +125,7 @@ class Node:
         # if len(self.bag) < coeff * 100:
         #     return 0
         # return self.x_bar + Cp*math.sqrt(2*math.log(self.parent.n)/(self.n + self.counter))
-        return self.x_bar + Cp*math.sqrt(2*math.log(self.parent.counter)/self.counter) - self.f1[-1]
+        return self.x_bar + Cp*math.sqrt(2*math.log(self.parent.counter)/self.counter) - 0.5 * self.f1[-1]
 
 
     def get_xbar(self):
