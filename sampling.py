@@ -133,8 +133,8 @@ if __name__ == '__main__':
     files = os.listdir(state_path)
     if files:
         files.sort(key=lambda x: os.path.getmtime(os.path.join(state_path, x)))
-        # node_path = os.path.join(state_path, files[-1])
-        node_path = 'states/mcts_agent_10000'
+        node_path = os.path.join(state_path, files[-1])
+        # node_path = 'states/mcts_agent_10000'
         with open(node_path, 'rb') as json_data:
             agent = pickle.load(json_data)
         with open('search_space_1', 'rb') as file:

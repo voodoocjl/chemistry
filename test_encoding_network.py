@@ -7,7 +7,7 @@ from torch import nn
 import matplotlib.pyplot as plt
 from torch.utils.data import DataLoader, TensorDataset
 import time
-from sklearn.metrics import accuracy_score
+from sklearn.metrics import accuracy_score, f1_score
 
 torch.cuda.is_available = lambda : False
 # torch.set_num_threads(4)
@@ -99,7 +99,7 @@ for hidden_dim in range(32, 128, 16):
     
     train_loss_list, test_loss_list = [], []
     s = time.time()
-    for epoch in range(1, 3001):
+    for epoch in range(1, 2001):
         for x, y in dataloader:
             model.train()
             pred = model(x)  # shape: (2284, 21)
@@ -121,7 +121,8 @@ for hidden_dim in range(32, 128, 16):
                 # pred_label = get_label(pred[:, -1])
                 pred_label = (pred[:, -1] > 0.5).float()
                 label = label.cpu()
-                acc = accuracy_score(pred_label.numpy(), label.numpy())
+                # acc = accuracy_score(pred_label.numpy(), label.numpy())
+                acc = f1_score(label, pred_label)
                 print(epoch, acc)
                 train_loss_list.append(acc)
     e = time.time()
@@ -135,7 +136,8 @@ for hidden_dim in range(32, 128, 16):
         # pred_label = get_label(pred[:, -1])
         pred_label = (pred[:, -1] > 0.5).float()
         test_label = test_label.cpu()
-        acc = accuracy_score(pred_label.numpy(), test_label.numpy())
+        # acc = accuracy_score(pred_label.numpy(), test_label.numpy())
+        acc = f1_score(test_label, pred_label)
         print("test acc:", acc)
         train_loss_list.append(acc)
     print(train_loss_list)

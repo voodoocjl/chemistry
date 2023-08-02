@@ -27,7 +27,7 @@ class Node:
         self.kids          = []
         self.bag           = {}
         self.validation    = {}
-        self.f1            = []
+        self.f1            = [0]
 
         # data for good and bad kids, respectively
         self.good_kid_data = {}
@@ -125,7 +125,7 @@ class Node:
         # if len(self.bag) < coeff * 100:
         #     return 0
         # return self.x_bar + Cp*math.sqrt(2*math.log(self.parent.n)/(self.n + self.counter))
-        return self.x_bar + Cp*math.sqrt(2*math.log(self.parent.counter)/self.counter)
+        return self.x_bar + Cp*math.sqrt(2*math.log(self.parent.counter)/self.counter) - self.f1[-1]
 
 
     def get_xbar(self):
@@ -191,7 +191,7 @@ class Node:
         for k in self.bag.keys():
             if k in self.validation:
                 i += 1
-        precision = i / len(self.bag)
+        precision = i / (len(self.bag) + 1e-6)
         i = 0
         for k in self.validation.keys():
             if k in self.bag:
