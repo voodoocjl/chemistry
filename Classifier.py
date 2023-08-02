@@ -20,19 +20,51 @@ class LinearModel(nn.Module):
 """
 torch.cuda.is_available = lambda : False
 
-class Encoder(nn.Module):
-    def __init__(self, input_dim, hidden_dim, output_dim):
-        super(Encoder, self).__init__()
-        self.network = nn.Sequential(
-            nn.Linear(input_dim, hidden_dim),
-            nn.Sigmoid(),
-            nn.Linear(hidden_dim, output_dim)
-            )
+# class Encoder(nn.Module):
+#     def __init__(self, input_dim, hidden_dim, output_dim):
+#         super(Encoder, self).__init__()
+#         self.network = nn.Sequential(
+#             nn.Linear(input_dim, hidden_dim),
+#             nn.Sigmoid(),
+#             nn.Linear(hidden_dim, output_dim)
+#             )
         
+#     def forward(self, x):
+#         y = self.network(x)
+#         y = torch.sigmoid(y)
+#         return y
+
+class Enco_Conv_Net(nn.Module):
+    def __init__(self, n_channels, output_dim):
+        super(Enco_Conv_Net, self).__init__()
+        self.features_2x2 = nn.Sequential(
+            nn.Conv2d(1, n_channels, kernel_size=2),
+            nn.Sigmoid()
+            )
+        self.features_4x4 = nn.Sequential(
+            nn.Conv2d(1, n_channels, kernel_size=4),
+            nn.Sigmoid()
+            )
+        self.classifier = nn.Linear(42, output_dim)
+
     def forward(self, x):
-        y = self.network(x)
+        x = self.transform(x)
+        x1 = self.features_2x2(x)
+        x1 = torch.mean(x1, dim=1).flatten(1)
+        x2 = self.features_4x4(x)
+        x2 = torch.mean(x2, dim=1).flatten(1)
+        x_ = torch.cat((x1, x2), 1)
+        y = self.classifier(x_)
         y = torch.sigmoid(y)
         return y
+    
+    def transform(self, x):
+        len = x[0].shape[0]
+        xbar = torch.cat((x[:, 6:], x[:, :6]), 1)
+        x = x.unsqueeze(1).unsqueeze(1)
+        xbar = xbar.unsqueeze(1).unsqueeze(1)
+        x = torch.cat((x, xbar, x, xbar), 2)
+        return x
 
 
 class Classifier:
@@ -45,7 +77,8 @@ class Classifier:
         self.training_counter = 0
         self.node_layer       = ceil(log2(node_id + 2) - 1)
         self.hidden_dims      = [6, 7, 8, 9, 10]  #[16, 20, 24, 28, 32]
-        self.model            = Encoder(input_dim, self.hidden_dims[self.node_layer], 6 + 1)
+        # self.model            = Encoder(input_dim, self.hidden_dims[self.node_layer], 6 + 1)
+        self.model            = Enco_Conv_Net(8, 7)
         if torch.cuda.is_available():
             self.model.cuda()
         self.loss_fn          = nn.MSELoss()
@@ -184,11 +217,11 @@ class Classifier:
         return np.mean(true_np)
 
 
-    def split_data(self):
+    def split_data(self, f1 = None):
         samples_badness = {}
         samples_goodies = {}
         if len(self.nets) == 0:
-            return samples_goodies, samples_badness
+            return samples_goodies, samples_badness        
         self.train()
         outputs = self.model(self.nets)[:, -1].reshape(-1, 1)
         if torch.cuda.is_available():

@@ -121,9 +121,9 @@ class Node:
             return float('inf')
         if self.n == 0:
             return float('inf')
-        # coeff = 2 ** (5 - ceil(log2(self.id + 2))) 
-        # if len(self.bag) < coeff * 100:
-        #     return 0
+        coeff = 2 ** (5 - ceil(log2(self.id + 2))) 
+        if len(self.bag) < coeff * 50:
+            return 0
         # return self.x_bar + Cp*math.sqrt(2*math.log(self.parent.n)/(self.n + self.counter))
         return self.x_bar + 2 * Cp*math.sqrt(2*math.log(self.parent.counter)/self.counter) - 0.5 * self.f1[-1]
 
