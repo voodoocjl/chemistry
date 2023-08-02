@@ -138,11 +138,18 @@ def sampling_node(agent, nodes, dataset, verbose = None):
                 print(report)
             metrics = report['energy']
             energy.append(metrics)
-            with open('results_sampling.csv', 'a+', newline='') as res:
-                writer = csv.writer(res)                
-                writer.writerow([j, sampled_arch, sample_no, metrics])           
+            # with open('results_sampling.csv', 'a+', newline='') as res:
+            #     writer = csv.writer(res)                
+            #     writer.writerow([j, sampled_arch, sample_no, metrics])           
         energy_list.append(np.mean(energy))
     print("\033[1;33;40mResult: {}\033[0m".format(energy_list))
+    if os.path.isfile('results_sampling.csv') == False:
+        with open('results_sampling.csv', 'w+', newline='') as res:
+            writer = csv.writer(res)
+            writer.writerow(nodes)
+    with open('results_sampling.csv', 'a+', newline='') as res:
+        writer = csv.writer(res)                
+        writer.writerow(energy_list)
 
 if __name__ == '__main__':
     # set random seed
@@ -151,13 +158,7 @@ if __name__ == '__main__':
     torch.random.manual_seed(42)
     
     with open('data/chemistry_dataset', 'rb') as file:
-        dataset = pickle.load(file)
-    
-    if os.path.isfile('results_sampling.csv') == False:
-        with open('results_sampling.csv', 'w+', newline='') as res:
-            writer = csv.writer(res)
-            writer.writerow(['sample_id', 'arch_code', 'sample_node', 'Energy'])
-            
+        dataset = pickle.load(file)            
     
     state_path = 'states'
     files = os.listdir(state_path)
@@ -192,6 +193,10 @@ if __name__ == '__main__':
     agent.print_tree()
        
     nodes = [0, 1, 2, 3, 12, 13, 14, 15]
+    if os.path.isfile('results_sampling.csv') == False:
+        with open('results_sampling.csv', 'w+', newline='') as res:
+            writer = csv.writer(res)
+            writer.writerow(nodes)
     sampling_node(agent, nodes, dataset, 'print')
         
     
