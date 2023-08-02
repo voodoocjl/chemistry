@@ -147,10 +147,12 @@ def sampling_node(agent, nodes, dataset, iteration, verbose = None):
     if os.path.isfile('results_sampling.csv') == False:
         with open('results_sampling.csv', 'w+', newline='') as res:
             writer = csv.writer(res)
-            writer.writerow(['iteration', nodes])
-    with open('results_sampling.csv', 'a+', newline='') as res:
-        writer = csv.writer(res)                
-        writer.writerow([iteration, energy_list])
+            nodes.insert(0, 'iteration')
+            writer.writerow(nodes)
+    with open('results_sampling.csv', 'a+', newline='') as res:        
+        energy_list.insert(0, iteration)
+        writer = csv.writer(res)                       
+        writer.writerow(energy_list)
 
 if __name__ == '__main__':
     # set random seed
