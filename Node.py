@@ -27,7 +27,7 @@ class Node:
         self.kids          = []
         self.bag           = {}
         self.validation    = {}
-        self.f1            = []
+        self.f1            = [0]
 
         # data for good and bad kids, respectively
         self.good_kid_data = {}
@@ -121,11 +121,11 @@ class Node:
             return float('inf')
         if self.n == 0:
             return float('inf')
-        # coeff = 2 ** (5 - ceil(log2(self.id + 2))) 
-        # if len(self.bag) < coeff * 100:
-        #     return 0
+        coeff = 2 ** (5 - ceil(log2(self.id + 2))) 
+        if len(self.bag) < coeff * 50:
+            return 0
         # return self.x_bar + Cp*math.sqrt(2*math.log(self.parent.n)/(self.n + self.counter))
-        return self.x_bar + Cp*math.sqrt(2*math.log(self.parent.counter)/self.counter)
+        return self.x_bar + 2 * Cp*math.sqrt(2*math.log(self.parent.counter)/self.counter) - 0.5 * self.f1[-1]
 
 
     def get_xbar(self):
@@ -160,7 +160,7 @@ class Node:
            self.n     = len(self.bag.values())
 
 
-    def predict(self, method = None):
+    def predict(self, method = None):                       
         if self.parent == None and self.is_root == True and self.is_leaf == False:
             self.good_kid_data, self.bad_kid_data = self.classifier.split_predictions(self.bag, method)
         elif self.is_leaf:
@@ -178,16 +178,25 @@ class Node:
         if method:
             self.validation = self.bag.copy()
 
+    def predict_validation(self):               
+        if self.is_leaf == False:
+            self.good_kid_data, self.bad_kid_data = self.classifier.split_predictions(self.validation)
+        if self.is_good_kid:
+            self.bag = self.parent.good_kid_data
+                  
+       
+
     def get_performance(self):
         i = 0
         for k in self.bag.keys():
             if k in self.validation:
                 i += 1
-        precision = i / len(self.bag)
+        precision = i / (len(self.bag) + 1e-6)
+        i = 0
         for k in self.validation.keys():
             if k in self.bag:
                 i += 1
-        recall = i / len(self.bag)
+        recall = i / len(self.validation)
         f1 = 2 * precision * recall / (precision + recall + 1e-6)
         return f1
         
@@ -196,8 +205,7 @@ class Node:
         if len(self.bag) == 0:
             return None
         net_str = random.choice(list(self.bag.keys()))
-        del self.bag[net_str]
-        del self.parent.bag[net_str]
+        del self.bag[net_str]       
         return json.loads(net_str)
     
 class Color:

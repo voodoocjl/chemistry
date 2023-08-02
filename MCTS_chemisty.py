@@ -9,6 +9,7 @@ from Node import Node
 from ChemModel import translator
 from schemes import chemistry
 import time
+from sampling import sampling_node
 
 
 def num2ord(num):
@@ -96,7 +97,8 @@ class MCTS:
 
     def populate_validation_data(self):        
         for k, v in validation.items():
-            self.ROOT.put_in_bag(eval(k), v)
+            self.ROOT.validation[k] = v
+        self.ROOT.bag = self.ROOT.validation.copy()
     
     def populate_prediction_data(self):
         # self.reset_node_data()
@@ -109,16 +111,17 @@ class MCTS:
             i.train()
 
 
-    def predict_nodes(self, method = None):
+    def predict_nodes(self, method = None, dataset =None):
         for i in self.nodes:
-            i.predict(method)
+            if dataset:
+                i.predict_validation()
+            else:
+                i.predict(method)
 
     def node_performance(self):
         for i in self.nodes:
             if i.is_leaf == False:
-                i.f1.append(i.kids[0].get_performance())
-            i.validation = {}
-
+                i.f1.append(i.kids[0].get_performance())   
 
     def check_leaf_bags(self):
         counter = 0
@@ -158,15 +161,15 @@ class MCTS:
             sample_node = self.sample_nodes.pop()
             
             try:
-                print("\nget job from QUEUE:", job)
+                # print("\nget job from QUEUE:", job)
                 
                 job_str = json.dumps(job)
                 design = translator(job)
                 # print("translated to:\n{}".format(design))
-                print("\nstart training:")
+                # print("\nstart training:")
                 if job_str in dataset:
                     report = {'energy': dataset.get(job_str)}
-                    print(report)
+                    # print(report)
                 else:
                     report = chemistry(design)
                     
@@ -181,7 +184,7 @@ class MCTS:
                     
                     metrics = report['energy']
                     writer.writerow([len(self.samples), job_str, sample_node, metrics])
-                print("\nresults of current model saved")
+                # print("\nresults of current model saved")
                 # save all models and reports
                 # torch.save(best_model.state_dict(), 'models/model_weights_'+str(len(self.samples))+'.pth')
                 # with open('reports/report_'+str(len(self.samples)), 'wb') as file:
@@ -194,7 +197,7 @@ class MCTS:
                 #         pickle.dump(report, file)
                 #     print("better model saved")
                 # print("current min_mae: {}({} sample)".format(1/self.MAX_MAEINV, num2ord(self.MAX_SAMPNUM)))
-                print("current number of samples: {}".format(len(self.samples)))
+                # print("current number of samples: {}".format(len(self.samples)))
                       
             except Exception as e:
                 print(e)
@@ -204,6 +207,10 @@ class MCTS:
 
 
     def search(self):
+        if len(self.ROOT.validation) == 0:
+            self.populate_validation_data()           
+            self.predict_nodes('mean')
+            self.reset_node_data()   
 
         while len(self.search_space) > 0:
             self.dump_all_states(len(self.samples))
@@ -235,25 +242,15 @@ class MCTS:
             # clear the data in nodes           
             self.reset_node_data()           
 
-            print("\npopulate validation data...")
-            self.populate_validation_data()
-            print("finished")
+            # print("\npopulate validation data...")                               
+            # self.ROOT.bag = self.ROOT.validation.copy()
+            # self.predict_nodes()
+            # self.node_performance()
+            # self.reset_node_data()
 
-            print("\npredict and partition nets in search space...")
-            self.predict_nodes('mean')
-
-            self.reset_node_data()
-
-            print("\npopulate validation data...")
-            self.populate_validation_data()
-            print("finished")
-
-            print("\npredict and partition nets in search space...")
-            self.predict_nodes()
-
+            self.predict_nodes(None, 'validation')
             self.node_performance()
-
-            self.reset_node_data()   
+            self.reset_node_data()
 
             print("\npopulate prediction data...")
             self.populate_prediction_data()
@@ -264,6 +261,9 @@ class MCTS:
             self.check_leaf_bags()
             print("finished")
             self.print_tree()
+            # sampling nodes
+            nodes = [0, 1, 2, 3, 12, 13, 14, 15]
+            sampling_node(self, nodes, dataset, self.ITERATION)
 
             for i in range(0, 50):
                 # select
@@ -275,8 +275,8 @@ class MCTS:
                 if sampled_arch is not None:
                 # TODO: back-propogate an architecture
                 # push the arch into task queue
-                    print("\nselected node " + str(target_bin.id-15) + " in leaf layer")
-                    print("sampled arch:", sampled_arch)
+                    # print("\nselected node " + str(target_bin.id-15) + " in leaf layer")
+                    # print("sampled arch:", sampled_arch)
                     if json.dumps(sampled_arch) not in self.DISPATCHED_JOB:
                         self.TASK_QUEUE.append(sampled_arch)
                         self.search_space.remove(sampled_arch)
@@ -303,8 +303,7 @@ class MCTS:
                                     if json.dumps(sampled_arch) not in self.DISPATCHED_JOB:
                                         self.TASK_QUEUE.append(sampled_arch)
                                         self.search_space.remove(sampled_arch)
-                                        self.sample_nodes.append(n.id-15)
-                # self.nodes[id].counter += 1               
+                                        self.sample_nodes.append(n.id-15)                              
             self.ITERATION += 1
 
 
