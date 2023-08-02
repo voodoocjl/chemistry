@@ -168,7 +168,7 @@ if __name__ == '__main__':
     print("total architectures:", len(search_space))
 
     if os.path.isfile('results_2W.csv') == False:
-        with open('results_9W.csv', 'w+', newline='') as res:
+        with open('results_2W.csv', 'w+', newline='') as res:
             writer = csv.writer(res)
             writer.writerow(['sample_id', 'arch_code', 'sample_node', 'Energy'])
 
@@ -181,4 +181,4 @@ if __name__ == '__main__':
             writer = csv.writer(res)
             metrics = report['energy']
             writer.writerow([(i+1), net, 0, metrics])
-        print("\nresults of current model saved")
+        print("\nresults of model {} saved".format(i))

@@ -175,3 +175,5 @@ data/*.csv
 results - 副本.csv
 results - 副本 (2).csv
 data/results1.csv
+results_sampling.csv
+results_2W.csv
