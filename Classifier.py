@@ -20,51 +20,51 @@ class LinearModel(nn.Module):
 """
 torch.cuda.is_available = lambda : False
 
-# class Encoder(nn.Module):
-#     def __init__(self, input_dim, hidden_dim, output_dim):
-#         super(Encoder, self).__init__()
-#         self.network = nn.Sequential(
-#             nn.Linear(input_dim, hidden_dim),
-#             nn.Sigmoid(),
-#             nn.Linear(hidden_dim, output_dim)
-#             )
+class Encoder(nn.Module):
+    def __init__(self, input_dim, hidden_dim, output_dim):
+        super(Encoder, self).__init__()
+        self.network = nn.Sequential(
+            nn.Linear(input_dim, hidden_dim),
+            nn.Sigmoid(),
+            nn.Linear(hidden_dim, output_dim)
+            )
         
+    def forward(self, x):
+        y = self.network(x)
+        y[-1] = torch.sigmoid(y[-1])
+        return y
+
+# class Enco_Conv_Net(nn.Module):
+#     def __init__(self, n_channels, output_dim):
+#         super(Enco_Conv_Net, self).__init__()
+#         self.features_2x2 = nn.Sequential(
+#             nn.Conv2d(1, n_channels, kernel_size=2),
+#             nn.Sigmoid()
+#             )
+#         self.features_4x4 = nn.Sequential(
+#             nn.Conv2d(1, n_channels, kernel_size=4),
+#             nn.Sigmoid()
+#             )
+#         self.classifier = nn.Linear(42, output_dim)
+
 #     def forward(self, x):
-#         y = self.network(x)
+#         x = self.transform(x)
+#         x1 = self.features_2x2(x)
+#         x1 = torch.mean(x1, dim=1).flatten(1)
+#         x2 = self.features_4x4(x)
+#         x2 = torch.mean(x2, dim=1).flatten(1)
+#         x_ = torch.cat((x1, x2), 1)
+#         y = self.classifier(x_)
 #         y = torch.sigmoid(y)
 #         return y
-
-class Enco_Conv_Net(nn.Module):
-    def __init__(self, n_channels, output_dim):
-        super(Enco_Conv_Net, self).__init__()
-        self.features_2x2 = nn.Sequential(
-            nn.Conv2d(1, n_channels, kernel_size=2),
-            nn.Sigmoid()
-            )
-        self.features_4x4 = nn.Sequential(
-            nn.Conv2d(1, n_channels, kernel_size=4),
-            nn.Sigmoid()
-            )
-        self.classifier = nn.Linear(42, output_dim)
-
-    def forward(self, x):
-        x = self.transform(x)
-        x1 = self.features_2x2(x)
-        x1 = torch.mean(x1, dim=1).flatten(1)
-        x2 = self.features_4x4(x)
-        x2 = torch.mean(x2, dim=1).flatten(1)
-        x_ = torch.cat((x1, x2), 1)
-        y = self.classifier(x_)
-        y = torch.sigmoid(y)
-        return y
     
-    def transform(self, x):
-        len = x[0].shape[0]
-        xbar = torch.cat((x[:, 6:], x[:, :6]), 1)
-        x = x.unsqueeze(1).unsqueeze(1)
-        xbar = xbar.unsqueeze(1).unsqueeze(1)
-        x = torch.cat((x, xbar, x, xbar), 2)
-        return x
+#     def transform(self, x):
+#         len = x[0].shape[0]
+#         xbar = torch.cat((x[:, 6:], x[:, :6]), 1)
+#         x = x.unsqueeze(1).unsqueeze(1)
+#         xbar = xbar.unsqueeze(1).unsqueeze(1)
+#         x = torch.cat((x, xbar, x, xbar), 2)
+#         return x
 
 
 class Classifier:
@@ -77,8 +77,8 @@ class Classifier:
         self.training_counter = 0
         self.node_layer       = ceil(log2(node_id + 2) - 1)
         self.hidden_dims      = [6, 7, 8, 9, 10]  #[16, 20, 24, 28, 32]
-        # self.model            = Encoder(input_dim, self.hidden_dims[self.node_layer], 6 + 1)
-        self.model            = Enco_Conv_Net(8, 7)
+        self.model            = Encoder(input_dim, self.hidden_dims[self.node_layer], 2)
+        # self.model            = Enco_Conv_Net(8, 7)
         if torch.cuda.is_available():
             self.model.cuda()
         self.loss_fn          = nn.MSELoss()
@@ -126,13 +126,15 @@ class Classifier:
         for epoch in range(self.epochs):
             nets = self.nets
             labels = self.labels
+            maeinv = self.maeinv
             # clear grads
             self.optimizer.zero_grad()
             # forward to get predicted values
             outputs = self.model(nets)
-            loss_s = self.loss_fn(outputs[:, :6], nets[:, 6:])
+            # loss_s = self.loss_fn(outputs[:, :6], nets[:, 6:])
+            loss_mae = self.loss_fn(outputs[:, 0], maeinv.reshape(-1))
             loss_t = self.loss_fn(outputs[:, -1], labels.reshape(-1))
-            loss = loss_s + loss_t
+            loss = loss_mae + loss_t
             loss.backward()  # back props
             nn.utils.clip_grad_norm_(self.model.parameters(), 5)
             self.optimizer.step()  # update the parameters
@@ -154,17 +156,21 @@ class Classifier:
         remaining_archs = torch.from_numpy(np.asarray(remaining_archs, dtype=np.float32).reshape(-1, self.input_dim))
         if torch.cuda.is_available():
             remaining_archs = remaining_archs.cuda()
-        outputs = self.model(remaining_archs)[:, -1].reshape(-1, 1)
+
+        outputs = self.model(remaining_archs)
+        labels = outputs[:, -1].reshape(-1, 1)  #output labels
+        xbar = outputs[:, 0].mean().detach().tolist()
+
         if torch.cuda.is_available():
             remaining_archs = remaining_archs.cpu()
-            outputs         = outputs.cpu()
+            labels         = labels.cpu()
         result = {}
         for k in range(0, len(remaining_archs)):
             arch = remaining_archs[k].detach().numpy().astype(np.int32)
             arch_str = json.dumps(arch.tolist())
-            result[arch_str] = outputs[k].detach().numpy().tolist()[0]
+            result[arch_str] = labels[k].detach().numpy().tolist()[0]
         assert len(result) == len(remaining)
-        return result
+        return result, xbar
 
 
     def split_predictions(self, remaining, method = None):
@@ -172,16 +178,16 @@ class Classifier:
         samples_badness = {}
         samples_goodies = {}
         if len(remaining) == 0:
-            return samples_goodies, samples_badness
+            return samples_goodies, samples_badness, 0
         if method == None:
-            predictions = self.predict(remaining)  # arch_str -> pred_test_mae
+            predictions, xbar = self.predict(remaining)  # arch_str -> pred_test_mae
             for k, v in predictions.items():
                 if v < 0.5:
                     samples_badness[k] = v
                 else:
                     samples_goodies[k] = v
         else:
-            predictions = np.mean(list(remaining.values()))
+            predictions = np.mean(list(remaining.values()))     # to split validation set
             for k, v in remaining.items():
                 if v > predictions:
                     samples_badness[k] = v
@@ -189,7 +195,7 @@ class Classifier:
                     samples_goodies[k] = v
                 
         assert len(samples_badness) + len(samples_goodies) == len(remaining)
-        return samples_goodies, samples_badness
+        return samples_goodies, samples_badness, xbar
 
     """
     def predict_mean(self):
