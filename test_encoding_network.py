@@ -1,57 +1,37 @@
 import random
 import pickle
-import time
+import csv
 import numpy as np
 import torch
 from torch import nn
-from torch.utils.data import DataLoader, TensorDataset
-from sklearn.metrics import accuracy_score, f1_score
 import matplotlib.pyplot as plt
+from torch.utils.data import DataLoader, TensorDataset
+import time
+from sklearn.metrics import accuracy_score, f1_score
 
-"""
+# torch.cuda.is_available = lambda : False
+# torch.set_num_threads(4)
+
+# torch.backends.cudnn.enabled = False
+# torch.backends.cudnn.benchmark = False
+# torch.backends.cudnn.deterministic = True
+
 class Encoder(nn.Module):
     def __init__(self, input_dim, hidden_dim, output_dim):
         super(Encoder, self).__init__()
-        self.classifier = nn.Sequential(
+        self.network = nn.Sequential(
             nn.Linear(input_dim, hidden_dim),
             nn.Sigmoid(),
-            nn.Linear(hidden_dim, output_dim)
+            # nn.Linear(64, hidden_dim),
+            # nn.Sigmoid(),
+            nn.Linear(hidden_dim, output_dim)            
             )
-
+        
     def forward(self, x):
-        y = self.classifier(x)
+        y = self.network(x)
+        # y[:,-1] = torch.sigmoid(y[:,-1])
+        # y = torch.round(y)
         return y
-"""
-
-class Enco_Conv_Net(nn.Module):
-    def __init__(self, n_channels, output_dim):
-        super(Enco_Conv_Net, self).__init__()
-        self.features_2x2 = nn.Sequential(
-            nn.Conv2d(1, n_channels, kernel_size=2),
-            nn.Sigmoid()
-            )
-        self.features_4x4 = nn.Sequential(
-            nn.Conv2d(1, n_channels, kernel_size=4),
-            nn.Sigmoid()
-            )
-        self.classifier = nn.Linear(42, output_dim)
-
-    def forward(self, x):
-        x1 = self.features_2x2(x)
-        x1 = torch.mean(x1, dim=1).flatten(1)
-        x2 = self.features_4x4(x)
-        x2 = torch.mean(x2, dim=1).flatten(1)
-        x_ = torch.cat((x1, x2), 1)
-        y = self.classifier(x_)
-        y = torch.sigmoid(y)
-        return y
-
-def get_label(energy):
-    label = torch.zeros_like(energy)
-    for i in range(len(energy)):
-        if energy[i] < energy.mean():
-            label[i] = 1
-    return label
 
 
 # set random seed
@@ -62,75 +42,110 @@ torch.random.manual_seed(seed)
 
 with open('data/chemistry_dataset', 'rb') as file:
     dataset = pickle.load(file)
-arch_code_len = len(eval(list(dataset.keys())[0]))
 
 arch_code, energy = [], []
-for k, v in dataset.items():
-    arch_code_2d = []
-    arch = eval(k)
-    for _ in range(2):
-        arch_code_2d.append(arch)
-        arch_code_2d.append(arch[arch_code_len//2:]+arch[:arch_code_len//2])
-    arch_code.append(arch_code_2d)
-    energy.append(v)
+for key in dataset:
+    arch_code.append(eval(key))
+    energy.append(dataset[key])
 
-training_size = 2000
-arch_code_train = torch.from_numpy(np.asarray(arch_code[:training_size], dtype=np.float32)).unsqueeze(dim=1)  # (2000, 1, 4, 12)
-energy_train = torch.from_numpy(np.asarray(energy[:training_size], dtype=np.float32))
-label_train = get_label(energy_train)
+# # read code, val loss and test mae from .csv file
+# csv_reader = csv.reader(open('results/training.csv'))
+# arch_code, energy = [], []
+# for row in csv_reader:
+#     arch_code.append(eval(row[1]))
+#     energy.append(eval(row[3]))
 
-train_data = TensorDataset(arch_code_train, label_train)
-train_loader = DataLoader(train_data, batch_size=128, shuffle=True)
+def get_label(energy):
+    label = torch.zeros_like(energy)
+    for i in range(energy.shape[0]): 
+        label[i] = energy[i] < energy.mean()
+    return label
 
-arch_code_test = torch.from_numpy(np.asarray(arch_code[training_size:], dtype=np.float32)).unsqueeze(dim=1)
-label_test = get_label(torch.tensor(energy, dtype=torch.float32))[training_size:]
+true_label = get_label(torch.tensor(energy))
+t_size = 2000
+arch_code_train = torch.from_numpy(np.asarray(arch_code[:t_size], dtype=np.float32))
+energy_train = torch.from_numpy(np.asarray(energy[:t_size], dtype=np.float32))
+label = get_label(energy_train)
 
-test_acc_list = []
-for n_channels in range(2, 65, 4):
-    print("\nn_channels -", n_channels)
-    model = Enco_Conv_Net(n_channels, 1)
 
+if torch.cuda.is_available():
+    arch_code_train = arch_code_train.cuda()
+    energy_train = energy_train.cuda()
+    label = label.cuda()
+
+dataset = TensorDataset(arch_code_train, label)
+dataloader = DataLoader(dataset, batch_size=128, shuffle=True)
+
+arch_code_test = torch.from_numpy(np.asarray(arch_code[t_size:], dtype=np.float32))
+# energy_test = torch.from_numpy(np.asarray(energy[2000:], dtype=np.float32))
+test_label = true_label[t_size:]
+
+if torch.cuda.is_available():
+    arch_code_test = arch_code_test.cuda()
+    # energy_test = energy_test.cuda()
+    test_label = test_label.cuda()
+
+dataset1 = TensorDataset(arch_code_test, test_label)
+dataloader1 = DataLoader(dataset1, batch_size=1000, shuffle=True)
+
+print("dataset size: ", len(energy))
+print("training size: ", len(energy_train))
+print("test size: ", len(arch_code_test))
+
+for hidden_dim in range(64, 128, 16):
+    model = Encoder(12, hidden_dim, 1)
+    if torch.cuda.is_available():
+        model.cuda()    
     loss_fn = nn.MSELoss()
     optimizer = torch.optim.Adam(model.parameters(), lr=1e-3)
-
-    train_acc_list = []
+    
+    train_loss_list, test_loss_list = [], []
     s = time.time()
     for epoch in range(1, 2001):
-        model.train()
-        for x, y in train_loader:
-            pred = model(x)
-
+        for x, y in dataloader:
+            model.train()
+            pred = model(x)  # shape: (2284, 21)
+            # y = (y - 0.2 * torch.ones_like(y)).abs()
             # loss_s = loss_fn(pred[:, :12], x)
+            # loss_s = loss_fn(pred[:, :6], x[:, 6:])
             loss_e = loss_fn(pred[:, -1], y)
-
-            train_loss = loss_e #+ 0.5 * loss_s
+            
+            train_loss = loss_e #+ 0.1 * loss_s            
             optimizer.zero_grad()
             train_loss.backward()
-            optimizer.step()
+            optimizer.step()        
 
-        if epoch % 200 == 0:
+        if epoch % 500 == 0:
             model.eval()
             with torch.no_grad():
-                pred = model(arch_code_train)
+                pred = model(arch_code_train).cpu()
+                # error = (pred[:,-1] - energy_train).abs().mean()
+                # pred_label = get_label(pred[:, -1])
                 pred_label = (pred[:, -1] > 0.5).float()
-                label_train = label_train
-                acc = accuracy_score(label_train, pred_label)
-                f1 = f1_score(label_train, pred_label)
-                print(epoch, acc, f1)
-                train_acc_list.append(acc)
+                label = label.cpu()
+                acc = accuracy_score(pred_label.numpy(), label.numpy())
+                # acc = f1_score(label, pred_label)
+                print(epoch, acc)
+                train_loss_list.append(acc)
     e = time.time()
-    print('time:', e-s)
+    print('time: ', e-s)
 
     model.eval()
     with torch.no_grad():
-        pred = model(arch_code_test)
+        pred = model(arch_code_test).cpu()
+        # error = (pred[:,-1] - energy_train).abs().mean()
+        # error = loss_fn(pred[:,-1], energy_train)                
+        # pred_label = get_label(pred[:, -1])
         pred_label = (pred[:, -1] > 0.5).float()
-        acc = accuracy_score(label_test, pred_label)
-        f1 = f1_score(label_test, pred_label)
-        print("test acc:", acc, f1)
-        test_acc_list.append(acc)
-        
-print("max test acc:", max(test_acc_list), "n_channels:", test_acc_list.index(max(test_acc_list))+1)
-plt.figure()
-plt.plot(range(1, 65), test_acc_list)
+        test_label = test_label.cpu()
+        acc = accuracy_score(pred_label.numpy(), test_label.numpy())
+        # acc = f1_score(test_label, pred_label)
+        print("test acc:", acc)
+        train_loss_list.append(acc)
+    print(train_loss_list)
+
+plt.plot(range(len(train_loss_list)), train_loss_list, 'ro-')
+plt.title('min test loss')
+plt.xlabel('hidden dim')
+plt.ylabel('test loss')
 plt.show()
