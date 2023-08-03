@@ -6,12 +6,12 @@ dir_path = os.path.dirname(os.path.realpath(__file__))
 files = os.listdir(dir_path)
 dataset_file = os.path.join(dir_path, 'chemistry_dataset')
 
-with open(dataset_file, 'rb') as file:
-    dataset = pickle.load(file)
+# with open(dataset_file, 'rb') as file:
+#     dataset = pickle.load(file)
 
-print("size:", len(dataset))
+# print("size:", len(dataset))
 
-# dataset = {}
+dataset = {}
 
 for file in files:
     extension = os.path.splitext(file)[1]
@@ -20,7 +20,7 @@ for file in files:
         arch_code, energy = [], []
         for row in csv_reader:
             arch_code.append(row[1])
-            energy.append(row[3])
+            energy.append(row[2])
         try:
             assert arch_code[0] == 'arch_code' and energy[0] == 'Energy'
         except AssertionError:
