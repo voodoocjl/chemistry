@@ -313,7 +313,7 @@ if __name__ == '__main__':
     np.random.seed(42)
     torch.random.manual_seed(42)
 
-    with open('search_space_1', 'rb') as file:
+    with open('search_space', 'rb') as file:
         search_space = pickle.load(file)    
     arch_code_len = len(search_space[0])
     print("\nthe length of architecture codes:", arch_code_len)
