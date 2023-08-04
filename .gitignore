@@ -174,5 +174,5 @@ test
 data/*.csv
 train_space_1
 train_space_2
-data/chemistry_dataset - 副本
 *.csv
+data/validation

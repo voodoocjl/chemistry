@@ -212,7 +212,7 @@ class MCTS:
             self.predict_nodes('mean')
             self.reset_node_data()   
 
-        while len(self.search_space) > 0:
+        while len(self.search_space) > 0 and self.ITERATION < 400:
             self.dump_all_states(len(self.samples))
             print("\niteration:", self.ITERATION)
 
@@ -314,15 +314,16 @@ if __name__ == '__main__':
     torch.random.manual_seed(42)
 
     with open('search_space_1', 'rb') as file:
-        search_space = pickle.load(file)
-    search_space = search_space[:-10000]
+        search_space = pickle.load(file)    
     arch_code_len = len(search_space[0])
     print("\nthe length of architecture codes:", arch_code_len)
     print("total architectures:", len(search_space))
 
     with open('data/chemistry_dataset', 'rb') as file:
         dataset = pickle.load(file)
-    validation = dict(list(dataset.items())[-10000:])
+    with open('data/chemistry_validation', 'rb') as file:
+        validatiion = pickle.load(file)
+    # validation = dict(list(dataset.items())[-10000:])
 
     if os.path.isfile('results.csv') == False:
         with open('results.csv', 'w+', newline='') as res:
