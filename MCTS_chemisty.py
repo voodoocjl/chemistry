@@ -212,7 +212,7 @@ class MCTS:
             self.predict_nodes('mean')
             self.reset_node_data()   
 
-        while len(self.search_space) > 0 and self.ITERATION < 400:
+        while len(self.search_space) > 0 and self.ITERATION < 200:
             self.dump_all_states(len(self.samples))
             print("\niteration:", self.ITERATION)
 
