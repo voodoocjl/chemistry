@@ -121,8 +121,8 @@ class Node:
             return float('inf')
         if self.n == 0:
             return float('inf')
-        coeff = 2 ** (5 - ceil(log2(self.id + 2))) 
-        if len(self.bag) < coeff * 50:
+        # coeff = 2 ** (5 - ceil(log2(self.id + 2))) 
+        if len(self.bag) == 0:
             return 0
         # return self.x_bar + Cp*math.sqrt(2*math.log(self.parent.n)/(self.n + self.counter))
         return self.x_bar + 2 * Cp*math.sqrt(2*math.log(self.parent.counter)/self.counter)
@@ -208,7 +208,11 @@ class Node:
         if len(self.bag) == 0:
             return None
         net_str = random.choice(list(self.bag.keys()))
-        del self.bag[net_str]       
+        del self.bag[net_str]
+        parent_node = self.parent
+        for i in range(3):
+            del parent_node.bag[net_str]
+            parent_node = parent_node.parent       
         return json.loads(net_str)
     
 class Color:
