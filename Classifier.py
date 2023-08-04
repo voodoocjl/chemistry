@@ -177,6 +177,7 @@ class Classifier:
         assert type(remaining) == type({})
         samples_badness = {}
         samples_goodies = {}
+        xbar = 0
         if len(remaining) == 0:
             return samples_goodies, samples_badness, 0
         if method == None:

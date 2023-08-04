@@ -33,7 +33,7 @@ class MCTS:
         self.search_space   = search_space
         self.ARCH_CODE_LEN  = arch_code_len
         self.ROOT           = None
-        self.Cp             = 0.5
+        self.Cp             = 0.1
         self.nodes          = []
         self.samples        = {}
         self.TASK_QUEUE     = []
@@ -322,7 +322,7 @@ if __name__ == '__main__':
     with open('data/chemistry_dataset', 'rb') as file:
         dataset = pickle.load(file)
     with open('data/chemistry_validation', 'rb') as file:
-        validatiion = pickle.load(file)
+        validation = pickle.load(file)
     # validation = dict(list(dataset.items())[-10000:])
 
     if os.path.isfile('results.csv') == False:
