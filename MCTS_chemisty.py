@@ -33,7 +33,7 @@ class MCTS:
         self.search_space   = search_space
         self.ARCH_CODE_LEN  = arch_code_len
         self.ROOT           = None
-        self.Cp             = 0.1
+        self.Cp             = 0.5
         self.nodes          = []
         self.samples        = {}
         self.TASK_QUEUE     = []
@@ -66,7 +66,7 @@ class MCTS:
 
         self.ROOT = self.nodes[0]
         self.CURT = self.ROOT
-        self.init_train()
+        self.init_train()        
 
 
     def init_train(self):
@@ -212,7 +212,7 @@ class MCTS:
             self.predict_nodes('mean')
             self.reset_node_data()   
 
-        while len(self.search_space) > 0 and self.ITERATION < 300:
+        while len(self.search_space) > 0 and self.ITERATION < 200:
             self.dump_all_states(len(self.samples))
             print("\niteration:", self.ITERATION)
 
@@ -283,27 +283,19 @@ class MCTS:
                         self.sample_nodes.append(target_bin.id-15)
                 else:
                     # trail 1: pick a network from the left leaf                
-                    id = id - shift
-                    n = self.nodes[id]
-                    sampled_arch = n.sample_arch()
-                    if sampled_arch is not None:
-                        print("\nselected node " + str(n.id-15) + " in leaf layer")
-                        print("sampled arch:", sampled_arch)
-                        if json.dumps(sampled_arch) not in self.DISPATCHED_JOB:
-                            self.TASK_QUEUE.append(sampled_arch)
-                            self.search_space.remove(sampled_arch)
-                            self.sample_nodes.append(n.id-15)                                                        
-                    else:
-                        for n in self.nodes:
-                            if n.is_leaf == True:
-                                sampled_arch = n.sample_arch()
-                                if sampled_arch is not None:
-                                    print("\nselected node" + str(n.id-15) + " in leaf layer")
-                                    print("sampled arch:", sampled_arch)
-                                    if json.dumps(sampled_arch) not in self.DISPATCHED_JOB:
-                                        self.TASK_QUEUE.append(sampled_arch)
-                                        self.search_space.remove(sampled_arch)
-                                        self.sample_nodes.append(n.id-15)                              
+                    for n in self.nodes:
+                        if n.is_leaf == True:
+                            sampled_arch = n.sample_arch()
+                            if sampled_arch is not None:
+                                print("\nselected node" + str(n.id-15) + " in leaf layer")
+                                # print("sampled arch:", sampled_arch)
+                                if json.dumps(sampled_arch) not in self.DISPATCHED_JOB:
+                                    self.TASK_QUEUE.append(sampled_arch)
+                                    self.search_space.remove(sampled_arch)
+                                    self.sample_nodes.append(n.id-15)
+                                    break
+                            else:
+                                continue                            
             self.ITERATION += 1
 
 

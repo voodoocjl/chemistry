@@ -124,8 +124,8 @@ class Node:
         # coeff = 2 ** (5 - ceil(log2(self.id + 2))) 
         if len(self.bag) == 0:
             return 0
-        # return self.x_bar + Cp*math.sqrt(2*math.log(self.parent.n)/(self.n + self.counter))
-        return self.x_bar + 2 * Cp*math.sqrt(2*math.log(self.parent.counter)/self.counter)
+        return self.x_bar + Cp*math.sqrt(2*math.log(self.parent.n)/self.n )
+        # return self.x_bar + 2 * Cp*math.sqrt(2*math.log(self.parent.counter)/self.counter)
         
 
 
@@ -163,7 +163,7 @@ class Node:
 
     def predict(self, method = None):                       
         if self.parent == None and self.is_root == True and self.is_leaf == False:
-            self.good_kid_data, self.bad_kid_data, _ = self.classifier.split_predictions(self.bag, method)
+            self.good_kid_data, self.bad_kid_data = self.classifier.split_predictions(self.bag, method)            
         elif self.is_leaf:
             if self.is_good_kid:
                 self.bag = self.parent.good_kid_data
@@ -172,12 +172,10 @@ class Node:
         else:
             if self.is_good_kid:
                 self.bag = self.parent.good_kid_data
-                self.good_kid_data, self.bad_kid_data, xbar = self.classifier.split_predictions(self.parent.good_kid_data, method)
-                self.x_bar = xbar
+                self.good_kid_data, self.bad_kid_data = self.classifier.split_predictions(self.parent.good_kid_data, method)                
             else:
                 self.bag = self.parent.bad_kid_data
-                self.good_kid_data, self.bad_kid_data, xbar = self.classifier.split_predictions(self.parent.bad_kid_data, method)
-                self.x_bar = xbar
+                self.good_kid_data, self.bad_kid_data = self.classifier.split_predictions(self.parent.bad_kid_data, method)                
         if method:
             self.validation = self.bag.copy()
 
