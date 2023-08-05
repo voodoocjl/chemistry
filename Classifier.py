@@ -84,7 +84,7 @@ class Classifier:
 
     def train(self):
         if self.training_counter == 0:
-            self.epochs = 10000
+            self.epochs = 5000
         else:
             self.epochs = 2000
         self.training_counter += 1

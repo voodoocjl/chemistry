@@ -181,7 +181,7 @@ class Node:
 
     def predict_validation(self):               
         if self.is_leaf == False:
-            self.good_kid_data, self.bad_kid_data, _ = self.classifier.split_predictions(self.validation)
+            self.good_kid_data, self.bad_kid_data = self.classifier.split_predictions(self.validation)
         if self.is_good_kid:
             self.bag = self.parent.good_kid_data
                   
