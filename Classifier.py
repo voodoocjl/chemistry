@@ -20,19 +20,19 @@ class LinearModel(nn.Module):
 """
 torch.cuda.is_available = lambda : False
 
-# class Encoder(nn.Module):
-#     def __init__(self, input_dim, hidden_dim, output_dim):
-#         super(Encoder, self).__init__()
-#         self.network = nn.Sequential(
-#             nn.Linear(input_dim, hidden_dim),
-#             nn.Sigmoid(),
-#             nn.Linear(hidden_dim, output_dim)
-#             )
+class Encoder(nn.Module):
+    def __init__(self, input_dim, hidden_dim, output_dim):
+        super(Encoder, self).__init__()
+        self.network = nn.Sequential(
+            nn.Linear(input_dim, hidden_dim),
+            nn.Sigmoid(),
+            nn.Linear(hidden_dim, output_dim)
+            )
         
-#     def forward(self, x):
-#         y = self.network(x)
-#         y[-1] = torch.sigmoid(y[-1])
-#         return y
+    def forward(self, x):
+        y = self.network(x)
+        y[-1] = torch.sigmoid(y[-1])
+        return y
 
 class Enco_Conv_Net(nn.Module):
     def __init__(self, n_channels, output_dim):

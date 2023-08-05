@@ -212,7 +212,7 @@ class MCTS:
             self.predict_nodes('mean')
             self.reset_node_data()   
 
-        while len(self.search_space) > 0 and self.ITERATION < 200:
+        while len(self.search_space) > 0 and self.ITERATION < 300:
             self.dump_all_states(len(self.samples))
             print("\niteration:", self.ITERATION)
 
@@ -334,6 +334,8 @@ if __name__ == '__main__':
     # agent.search()
 
     state_path = 'states'
+    if os.path.exists(state_path) == False:
+        os.makedirs(state_path)
     files = os.listdir(state_path)
     if files:
         files.sort(key=lambda x: os.path.getmtime(os.path.join(state_path, x)))
