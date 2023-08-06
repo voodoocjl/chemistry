@@ -213,7 +213,8 @@ class MCTS:
             self.reset_node_data()   
 
         while len(self.search_space) > 0 and self.ITERATION < 200:
-            self.dump_all_states(len(self.samples))
+            if self.ITERATION > 0:
+                self.dump_all_states(len(self.samples))
             print("\niteration:", self.ITERATION)
 
             # evaluate jobs:
