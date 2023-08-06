@@ -5,7 +5,7 @@ import numpy as np
 import torch.nn as nn
 from torch import optim
 from sklearn.metrics import accuracy_score
-
+from torch.utils.data import DataLoader, TensorDataset
 
 """
 class LinearModel(nn.Module):
@@ -34,7 +34,7 @@ class Encoder(nn.Module):
         y[-1] = torch.sigmoid(y[-1])
         return y
 
-class Enco_Conv_Net(nn.Module):
+# class Enco_Conv_Net(nn.Module):
     def __init__(self, n_channels, output_dim):
         super(Enco_Conv_Net, self).__init__()
         self.features_2x2 = nn.Sequential(
@@ -66,6 +66,41 @@ class Enco_Conv_Net(nn.Module):
         x = torch.cat((x, xbar, x, xbar), 2)
         return x
 
+class Enco_Conv_Net(nn.Module):
+    def __init__(self, n_channels, output_dim):
+        super(Enco_Conv_Net, self).__init__()
+        self.features_2x2 = nn.Sequential(
+            nn.Conv2d(1, n_channels, kernel_size=2),
+            nn.ReLU(),
+            nn.MaxPool2d(2,2)            
+            )
+        self.pool1d = nn.MaxPool1d(3, 2)
+        self.features_4x4 = nn.Sequential(
+            nn.Conv2d(1, n_channels, kernel_size=4),
+            nn.ReLU(),
+            # nn.MaxPool1d(3, 2)        
+            )
+        self.classifier = nn.Linear(n_channels * 9, output_dim)
+
+    def forward(self, x):
+        x = self.transform(x)
+        x1 = self.features_2x2(x)
+        x2 = self.features_4x4(x)
+        x2 = self.pool1d(x2.squeeze(2))
+        x1 = x1.flatten(1)        
+        x2 = x2.flatten(1)
+        x_ = torch.cat((x1, x2), 1)
+        y = self.classifier(x_)
+        y[-1] = torch.sigmoid(y[-1])
+        return y
+    
+    def transform(self, x):
+        len = x[0].shape[0]
+        xbar = torch.cat((x[:, 6:], x[:, :6]), 1)
+        x = x.unsqueeze(1).unsqueeze(1)
+        xbar = xbar.unsqueeze(1).unsqueeze(1)
+        x = torch.cat((x, xbar, x, xbar), 2)
+        return x
 
 class Classifier:
     def __init__(self, samples, input_dim, node_id):
@@ -123,21 +158,24 @@ class Classifier:
         # in a rare case, one branch has no networks
         if len(self.nets) == 0:
             return
+        nets = self.nets
+        labels = self.labels
+        maeinv = self.maeinv
+        train_data = TensorDataset(nets, maeinv)
+        train_loader = DataLoader(train_data, batch_size=128, shuffle=True)
         for epoch in range(self.epochs):
-            nets = self.nets
-            labels = self.labels
-            maeinv = self.maeinv
-            # clear grads
-            self.optimizer.zero_grad()
-            # forward to get predicted values
-            outputs = self.model(nets)
-            # loss_s = self.loss_fn(outputs[:, :6], nets[:, 6:])
-            loss_mae = self.loss_fn(outputs[:, 0], maeinv.reshape(-1))
-            loss_t = self.loss_fn(outputs[:, -1], labels.reshape(-1))
-            loss = loss_mae + loss_t
-            loss.backward()  # back props
-            nn.utils.clip_grad_norm_(self.model.parameters(), 5)
-            self.optimizer.step()  # update the parameters
+            for x, y in train_loader:
+                # clear grads
+                self.optimizer.zero_grad()
+                # forward to get predicted values
+                outputs = self.model(nets)
+                # loss_s = self.loss_fn(outputs[:, :6], nets[:, 6:])
+                loss_mae = self.loss_fn(outputs[:, 0], maeinv.reshape(-1))
+                loss_t = self.loss_fn(outputs[:, -1], labels.reshape(-1))
+                loss = loss_mae + loss_t
+                loss.backward()  # back props
+                nn.utils.clip_grad_norm_(self.model.parameters(), 5)
+                self.optimizer.step()  # update the parameters
 
         # training accuracy 
         pred = self.model(nets).cpu()
