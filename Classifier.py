@@ -34,6 +34,42 @@ class Encoder(nn.Module):
         y = self.network(x)
         return y
 
+class Enco_Conv_Net(nn.Module):
+    def __init__(self, n_channels, output_dim):
+        super(Enco_Conv_Net, self).__init__()
+        self.features_2x2 = nn.Sequential(
+            nn.Conv2d(1, n_channels, kernel_size=2),
+            nn.ReLU(),
+            nn.MaxPool2d(2,2)            
+            )
+        self.pool1d = nn.MaxPool1d(3, 2)
+        self.features_4x4 = nn.Sequential(
+            nn.Conv2d(1, n_channels, kernel_size=4),
+            nn.ReLU(),
+            # nn.MaxPool1d(3, 2)        
+            )
+        self.classifier = nn.Linear(n_channels * 9, output_dim)
+
+    def forward(self, x):
+        x = self.transform(x)
+        x1 = self.features_2x2(x)
+        x2 = self.features_4x4(x)
+        x2 = self.pool1d(x2.squeeze(2))
+        x1 = x1.flatten(1)        
+        x2 = x2.flatten(1)
+        x_ = torch.cat((x1, x2), 1)
+        y = self.classifier(x_)
+        # y[-1] = torch.sigmoid(y[-1])
+        return y
+    
+    def transform(self, x):
+        len = x[0].shape[0]
+        xbar = torch.cat((x[:, 6:], x[:, :6]), 1)
+        x = x.unsqueeze(1).unsqueeze(1)
+        xbar = xbar.unsqueeze(1).unsqueeze(1)
+        x = torch.cat((x, xbar, x, xbar), 2)
+        return x
+
 
 class Classifier:
     def __init__(self, samples, input_dim, node_id):
@@ -45,8 +81,8 @@ class Classifier:
         self.training_counter = 0
         self.node_layer       = ceil(log2(node_id + 2) - 1)
         self.hidden_dims      = [5, 6, 7, 8, 9]  #[16, 20, 24, 28, 32]
-        self.model            = Encoder(input_dim, self.hidden_dims[self.node_layer], 1)
-        # self.model            = Enco_Conv_Net(8, 7)
+        # self.model            = Encoder(input_dim, self.hidden_dims[self.node_layer], 1)
+        self.model            = Enco_Conv_Net(4, 7)
         if torch.cuda.is_available():
             self.model.cuda()
         self.loss_fn          = nn.MSELoss()
@@ -84,7 +120,7 @@ class Classifier:
 
     def train(self):
         if self.training_counter == 0:
-            self.epochs = 5000
+            self.epochs = 4000
         else:
             self.epochs = 2000
         self.training_counter += 1
