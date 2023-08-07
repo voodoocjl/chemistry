@@ -161,17 +161,17 @@ class Classifier:
         nets = self.nets
         labels = self.labels
         maeinv = self.maeinv
-        train_data = TensorDataset(nets, maeinv)
+        train_data = TensorDataset(nets, maeinv, labels)
         train_loader = DataLoader(train_data, batch_size=128, shuffle=True)
         for epoch in range(self.epochs):
-            for x, y in train_loader:
+            for x, y, z in train_loader:
                 # clear grads
                 self.optimizer.zero_grad()
                 # forward to get predicted values
                 outputs = self.model(nets)
                 # loss_s = self.loss_fn(outputs[:, :6], nets[:, 6:])
-                loss_mae = self.loss_fn(outputs[:, 0], maeinv.reshape(-1))
-                loss_t = self.loss_fn(outputs[:, -1], labels.reshape(-1))
+                loss_mae = self.loss_fn(outputs[:, 0], y.reshape(-1))
+                loss_t = self.loss_fn(outputs[:, -1], z.reshape(-1))
                 loss = loss_mae + loss_t
                 loss.backward()  # back props
                 nn.utils.clip_grad_norm_(self.model.parameters(), 5)
