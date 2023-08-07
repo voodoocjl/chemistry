@@ -59,7 +59,7 @@ class Enco_Conv_Net(nn.Module):
         x2 = x2.flatten(1)
         x_ = torch.cat((x1, x2), 1)
         y = self.classifier(x_)
-        # y[-1] = torch.sigmoid(y[-1])
+        # y[:, -1] = torch.sigmoid(y[:, -1])
         return y
     
     def transform(self, x):
@@ -80,11 +80,12 @@ class Classifier:
         self.input_dim        = input_dim
         self.training_counter = 0
         self.node_layer       = ceil(log2(node_id + 2) - 1)
-        self.hidden_dims      =  [5, 6, 7, 8, 9]  #[16, 20, 24, 28, 32]
-        if node_id == 0:
-            self.model        = Encoder(input_dim, self.hidden_dims[self.node_layer], 1)
-        else:
-            self.model        = Enco_Conv_Net(4, 7)
+        self.hidden_dims      =  [2, 2, 3, 4, 5]  #[5, 6, 7, 8, 9]  #[16, 20, 24, 28, 32]
+        self.model            = Enco_Conv_Net(self.hidden_dims[self.node_layer], 1)
+        # if node_id == 0:
+        #     self.model        = Enco_Conv_Net(1, 1) #Encoder(input_dim, self.hidden_dims[self.node_layer], 1)
+        # else:
+        #     self.model        = Enco_Conv_Net(4, 1)
         if torch.cuda.is_available():
             self.model.cuda()
         self.loss_fn          = nn.MSELoss()
