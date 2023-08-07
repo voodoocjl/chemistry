@@ -61,7 +61,7 @@ class Enco_Conv_Net(nn.Module):
         x2 = x2.flatten(1)
         x_ = torch.cat((x1, x2), 1)
         y = self.classifier(x_)
-        y[-1] = torch.sigmoid(y[-1])
+        y[:,-1] = torch.sigmoid(y[:,-1])
         return y
     
     def transform(self, x):
@@ -97,7 +97,7 @@ class Classifier:
         self.boundary         = -1
         self.nets             = None
         self.maeinv           = None
-        # self.labels           = None
+        self.labels           = None
 
     def get_label(self, energy):
         label = torch.zeros_like(energy)
@@ -115,7 +115,7 @@ class Classifier:
             nets_maeinv.append(v)
         self.nets = torch.from_numpy(np.asarray(sampled_nets, dtype=np.float32).reshape(-1, self.input_dim))
         self.maeinv = torch.from_numpy(np.asarray(nets_maeinv, dtype=np.float32).reshape(-1, 1))
-        # self.labels = self.get_label(self.maeinv)
+        self.labels = self.get_label(self.maeinv)
         self.samples = latest_samples
         if torch.cuda.is_available():
             self.nets = self.nets.cuda()
@@ -141,7 +141,7 @@ class Classifier:
                 # clear grads
                 self.optimizer.zero_grad()
                 # forward to get predicted values
-                outputs = self.model(nets)
+                outputs = self.model(x)
                 # loss_s = self.loss_fn(outputs[:, :6], nets[:, 6:])
                 loss_mae = self.loss_fn(outputs[:, 0], y.reshape(-1))
                 loss_t = self.loss_fn(outputs[:, -1], z.reshape(-1))
@@ -152,13 +152,37 @@ class Classifier:
 
         # training accuracy
         pred = self.model(nets).cpu()
-        pred_label = (pred[:, -1] > self.sample_mean()).float()
-        true_label = (maeinv.reshape(-1) > self.sample_mean()).float()
-        # labels = self.labels.reshape(-1).cpu()
+        # split by maeinv
+        # pred_label = (pred[:, -1] > self.sample_mean()).float()
+        # true_label = (maeinv.reshape(-1) > self.sample_mean()).float()
+        # split by label
+        pred_label = (pred[:, -1] > 0.5).float()        
+        true_label = self.labels.reshape(-1).cpu()
         acc = accuracy_score(true_label.numpy(), pred_label.numpy())
         self.training_accuracy.append(acc)
 
 
+    # def predict(self, remaining):
+    #     assert type(remaining) == type({})
+    #     remaining_archs = []
+    #     for k, v in remaining.items():
+    #         net = json.loads(k)
+    #         remaining_archs.append(net)
+    #     remaining_archs = torch.from_numpy(np.asarray(remaining_archs, dtype=np.float32).reshape(-1, self.input_dim))
+    #     if torch.cuda.is_available():
+    #         remaining_archs = remaining_archs.cuda()
+    #     outputs = self.model(remaining_archs)[:, -1].reshape(-1, 1)
+    #     if torch.cuda.is_available():
+    #         remaining_archs = remaining_archs.cpu()
+    #         outputs         = outputs.cpu()
+    #     result = {}
+    #     for k in range(0, len(remaining_archs)):
+    #         arch = remaining_archs[k].detach().numpy().astype(np.int32)
+    #         arch_str = json.dumps(arch.tolist())
+    #         result[arch_str] = outputs[k].detach().numpy().tolist()[0]
+    #     assert len(result) == len(remaining)
+    #     return result
+    
     def predict(self, remaining):
         assert type(remaining) == type({})
         remaining_archs = []
@@ -168,29 +192,36 @@ class Classifier:
         remaining_archs = torch.from_numpy(np.asarray(remaining_archs, dtype=np.float32).reshape(-1, self.input_dim))
         if torch.cuda.is_available():
             remaining_archs = remaining_archs.cuda()
-        outputs = self.model(remaining_archs)[:, -1].reshape(-1, 1)
+
+        outputs = self.model(remaining_archs)
+        labels = outputs[:, -1].reshape(-1, 1)  #output labels
+        xbar = outputs[:, 0].mean().detach().tolist()
+
         if torch.cuda.is_available():
             remaining_archs = remaining_archs.cpu()
-            outputs         = outputs.cpu()
+            labels         = labels.cpu()
         result = {}
         for k in range(0, len(remaining_archs)):
             arch = remaining_archs[k].detach().numpy().astype(np.int32)
             arch_str = json.dumps(arch.tolist())
-            result[arch_str] = outputs[k].detach().numpy().tolist()[0]
+            result[arch_str] = labels[k].detach().numpy().tolist()[0]
         assert len(result) == len(remaining)
-        return result
+        return result, xbar
 
 
     def split_predictions(self, remaining, method = None):
         assert type(remaining) == type({})
         samples_badness = {}
         samples_goodies = {}
+        xbar = 0
         if len(remaining) == 0:
-            return samples_goodies, samples_badness
+            return samples_goodies, samples_badness, 0
         if method == None:
-            predictions = self.predict(remaining)  # arch_str -> pred_test_mae
+            predictions, xbar = self.predict(remaining)  # arch_str -> pred_test_mae
             for k, v in predictions.items():
-                if v < self.sample_mean():
+                # if v < self.sample_mean():
+                # split by label
+                if v < 0.5:
                     samples_badness[k] = v
                 else:
                     samples_goodies[k] = v
@@ -203,7 +234,7 @@ class Classifier:
                     samples_goodies[k] = v
 
         assert len(samples_badness) + len(samples_goodies) == len(remaining)
-        return samples_goodies, samples_badness
+        return samples_goodies, samples_badness, xbar
 
     """
     def predict_mean(self):
@@ -250,7 +281,8 @@ class Classifier:
         # avg_maeinv = self.sample_mean()
         # self.boundary = avg_maeinv
         for k, v in predictions.items():
-            if v < self.sample_mean():
+            # if v < self.sample_mean():
+            if v < 0.5:
                 samples_badness[k] = self.samples[k]  # (val_loss, test_mae)
             else:
                 samples_goodies[k] = self.samples[k]  # (val_loss, test_mae)
