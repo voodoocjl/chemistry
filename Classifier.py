@@ -82,10 +82,11 @@ class Classifier:
         self.training_counter = 0
         self.node_layer       = ceil(log2(node_id + 2) - 1)
         self.hidden_dims      =  [5, 6, 7, 8, 9]  #[16, 20, 24, 28, 32]
-        if node_id == 0:
-            self.model        = Encoder(input_dim, self.hidden_dims[self.node_layer], 1)
-        else:
-            self.model        = Enco_Conv_Net(4, 7)
+        # if node_id == 0:
+        #     self.model        = Encoder(input_dim, self.hidden_dims[self.node_layer], 1)
+        # else:
+        #     self.model        = Enco_Conv_Net(4, 2)
+        self.model        = Enco_Conv_Net(4, 2)
         if torch.cuda.is_available():
             self.model.cuda()
         self.loss_fn          = nn.MSELoss()
