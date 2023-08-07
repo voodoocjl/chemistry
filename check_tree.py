@@ -2,7 +2,7 @@ import pickle
 from MCTS_chemisty import MCTS
 from sampling import sampling_node
 
-with open('search_space_1', 'rb') as file:
+with open('search_space', 'rb') as file:
     search_space = pickle.load(file)
 
 with open('data/chemistry_dataset', 'rb') as file:
